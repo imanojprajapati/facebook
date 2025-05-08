@@ -19,6 +19,10 @@ const handler = NextAuth({
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   cookies: {
     sessionToken: {
       name: `${process.env.NODE_ENV === "production" ? "__Secure-" : ""}next-auth.session-token`,
@@ -41,6 +45,22 @@ const handler = NextAuth({
     async session({ session, token }: { session: any; token: ExtendedToken }) {
       session.accessToken = token.accessToken;
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
+    }
+  },
+  events: {
+    async error(error) {
+      console.error("NextAuth Error:", error);
+    },
+    async signIn({ user, account, profile }) {
+      console.log("Successful sign in:", { 
+        userId: user.id, 
+        provider: account?.provider 
+      });
     }
   },
   debug: process.env.NODE_ENV === 'development'
