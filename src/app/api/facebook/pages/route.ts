@@ -10,9 +10,13 @@ export async function GET() {
 
   try {
     const response = await fetch(
-      `https://graph.facebook.com/v18.0/me/accounts?access_token=${session.accessToken}`
+      `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token,picture&access_token=${session.accessToken}`
     );
     const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(data.error.message);
+    }
     
     return NextResponse.json(data);
   } catch (error) {

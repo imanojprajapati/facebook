@@ -13,7 +13,7 @@ const handler = NextAuth({
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: "pages_show_list,pages_read_engagement",
+          scope: "pages_show_list,pages_read_engagement,pages_manage_metadata,pages_read_user_content,leads_retrieval",
         },
       },
     }),
@@ -30,7 +30,6 @@ const handler = NextAuth({
       return session;
     },
   },
-  // Add production URL configuration
   cookies: {
     sessionToken: {
       name: `${process.env.NODE_ENV === "production" ? "__Secure-" : ""}next-auth.session-token`,
