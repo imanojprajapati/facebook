@@ -11,27 +11,60 @@ export async function POST(request: Request) {
   try {
     const { pageIds, pageTokens } = await request.json();
 
-    if (!pageIds || !Array.isArray(pageIds)) {
-      return NextResponse.json({ error: "Invalid page IDs" }, { status: 400 });
+    if (!pageIds || !Array.isArray(pageIds) || !pageTokens || !Array.isArray(pageTokens)) {
+      return NextResponse.json({ error: "Invalid request format" }, { status: 400 });
+    }
+
+    if (pageIds.length !== pageTokens.length) {
+      return NextResponse.json({ error: "Mismatched page IDs and tokens" }, { status: 400 });
     }
 
     const allLeads = await Promise.all(
       pageIds.map(async (pageId, index) => {
         const pageToken = pageTokens[index];
-        const response = await fetch(
-          `https://graph.facebook.com/v18.0/${pageId}/leads?access_token=${pageToken}&fields=id,created_time,ad_id,form_id,field_data`
-        );
-        const data = await response.json();
-        return {
-          pageId,
-          leads: data.data || []
-        };
+        try {
+          const response = await fetch(
+            `https://graph.facebook.com/v18.0/${pageId}/leads?access_token=${pageToken}&fields=id,created_time,ad_id,form_id,field_data`,
+            {
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          
+          const data = await response.json();
+          
+          if (data.error) {
+            console.error(`Error fetching leads for page ${pageId}:`, data.error);
+            return {
+              pageId,
+              error: data.error.message,
+              leads: []
+            };
+          }
+
+          return {
+            pageId,
+            leads: data.data || []
+          };
+        } catch (error) {
+          console.error(`Error fetching leads for page ${pageId}:`, error);
+          return {
+            pageId,
+            error: error instanceof Error ? error.message : "Unknown error",
+            leads: []
+          };
+        }
       })
     );
 
     return NextResponse.json({ data: allLeads });
   } catch (error) {
-    console.error('Error fetching leads:', error);
-    return NextResponse.json({ error: "Failed to fetch leads" }, { status: 500 });
+    console.error('Error processing leads request:', error);
+    return NextResponse.json({ 
+      error: "Failed to fetch leads",
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
   }
 }
