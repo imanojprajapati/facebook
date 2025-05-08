@@ -9,7 +9,7 @@ export async function GET() {
   }
 
   try {
-    const accessToken = process.env.FACEBOOK_ACCESS_TOKEN || session.accessToken;
+    const accessToken = session.accessToken;
     
     const response = await fetch(
       `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token,picture,category&access_token=${accessToken}`,
@@ -17,7 +17,8 @@ export async function GET() {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
-        }
+        },
+        cache: 'no-store'
       }
     );
 

@@ -36,6 +36,13 @@ const nextConfig = {
         ],
       },
     ]
+  },
+  output: 'standalone',
+  poweredByHeader: false,
+  env: {
+    NEXTAUTH_URL: process.env.NODE_ENV === 'production' 
+      ? 'https://www.leadstrack.in' 
+      : 'http://localhost:3000'
   }
 };
 
