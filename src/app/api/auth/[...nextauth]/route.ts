@@ -15,18 +15,22 @@ const handler = NextAuth({
         params: {
           scope: "pages_show_list,pages_read_engagement,leads_retrieval,pages_manage_metadata,pages_read_user_content"
         }
-      },
-      profile(profile) {
-        return {
-          id: profile.id,
-          name: profile.name,
-          email: profile.email,
-          image: profile.picture?.data?.url
-        };
       }
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
+  cookies: {
+    sessionToken: {
+      name: `${process.env.NODE_ENV === "production" ? "__Secure-" : ""}next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        domain: process.env.NODE_ENV === "production" ? ".leadstrack.in" : undefined
+      }
+    }
+  },
   callbacks: {
     async jwt({ token, account }): Promise<ExtendedToken> {
       if (account) {
