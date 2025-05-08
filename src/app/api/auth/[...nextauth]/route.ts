@@ -12,18 +12,16 @@ const handler = NextAuth({
       clientId: process.env.FACEBOOK_CLIENT_ID!,
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
       authorization: {
+        url: "https://www.facebook.com/v18.0/dialog/oauth",
         params: {
-          scope: "pages_show_list,pages_read_engagement,pages_manage_metadata,pages_read_user_content,leads_retrieval",
+          scope: "pages_show_list,pages_read_engagement",
         },
       },
     }),
   ],
   callbacks: {
     async jwt({ token, account }): Promise<ExtendedToken> {
-      // Use the environment access token if available, otherwise use the account token
-      if (process.env.FACEBOOK_ACCESS_TOKEN) {
-        token.accessToken = process.env.FACEBOOK_ACCESS_TOKEN;
-      } else if (account) {
+      if (account) {
         token.accessToken = account.access_token;
       }
       return token;

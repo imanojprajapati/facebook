@@ -3,7 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   images: {
-    domains: ['www.leadstrack.in', 'leadstrack.in', 'graph.facebook.com'],
+    domains: ['www.leadstrack.in', 'leadstrack.in', 'graph.facebook.com', 'platform-lookaside.fbsbx.com'],
   },
   async headers() {
     return [
