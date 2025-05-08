@@ -20,7 +20,10 @@ const handler = NextAuth({
   ],
   callbacks: {
     async jwt({ token, account }): Promise<ExtendedToken> {
-      if (account) {
+      // Use the environment access token if available, otherwise use the account token
+      if (process.env.FACEBOOK_ACCESS_TOKEN) {
+        token.accessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+      } else if (account) {
         token.accessToken = account.access_token;
       }
       return token;
