@@ -32,36 +32,10 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin'
-          },
-          {
-            key: 'Access-Control-Allow-Origin',
-            value: process.env.NODE_ENV === 'production' 
-              ? 'https://www.leadstrack.in' 
-              : 'http://localhost:3000'
-          },
-          {
-            key: 'Access-Control-Allow-Methods',
-            value: 'GET,POST,OPTIONS'
-          },
-          {
-            key: 'Access-Control-Allow-Headers',
-            value: 'Content-Type, Authorization'
           }
         ],
       },
     ]
-  },
-  async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: '/api/auth/callback/facebook',
-          destination: process.env.NODE_ENV === 'production'
-            ? 'https://www.leadstrack.in/api/auth/callback/facebook'
-            : 'http://localhost:3000/api/auth/callback/facebook'
-        }
-      ]
-    }
   }
 };
 
