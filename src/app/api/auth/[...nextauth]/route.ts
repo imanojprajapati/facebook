@@ -13,7 +13,7 @@ const handler = NextAuth({
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: "pages_show_list,pages_read_engagement"
+          scope: "pages_show_list,pages_read_engagement,leads_retrieval,pages_manage_metadata,pages_read_user_content"
         }
       }
     }),
