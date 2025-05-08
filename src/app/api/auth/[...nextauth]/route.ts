@@ -15,6 +15,14 @@ const handler = NextAuth({
         params: {
           scope: "pages_show_list,pages_read_engagement,leads_retrieval,pages_manage_metadata,pages_read_user_content"
         }
+      },
+      profile(profile) {
+        return {
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture?.data?.url
+        };
       }
     }),
   ],
@@ -28,21 +36,7 @@ const handler = NextAuth({
     async session({ session, token }: { session: any; token: ExtendedToken }) {
       session.accessToken = token.accessToken;
       return session;
-    },
-    async redirect({ url, baseUrl }) {
-      // Handle redirects
-      if (url.startsWith("/")) {
-        return `${baseUrl}${url}`;
-      } else if (url.startsWith(baseUrl)) {
-        return url;
-      }
-      return baseUrl;
     }
-  },
-  pages: {
-    signIn: '/',
-    signOut: '/',
-    error: '/'
   }
 });
 

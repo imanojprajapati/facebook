@@ -2,29 +2,24 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // Get hostname (e.g. vercel.com, test.vercel.app, etc.)
   const hostname = request.headers.get('host');
-  const url = request.nextUrl.clone();
+  const pathname = request.nextUrl.pathname;
 
-  // Skip middleware for API and static routes
-  if (url.pathname.startsWith('/api') || 
-      url.pathname.startsWith('/_next') || 
-      url.pathname.includes('/static/') ||
-      url.pathname.includes('.')) {
+  // Skip middleware for these paths to prevent infinite loops
+  if (
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/static') ||
+    pathname.includes('.') ||
+    pathname === '/favicon.ico' ||
+    pathname.startsWith('/_vercel')
+  ) {
     return NextResponse.next();
   }
 
-  // Validate allowed domains
-  const allowedDomains = ['localhost:3000', 'www.leadstrack.in', 'leadstrack.in'];
-  const isAllowedDomain = allowedDomains.some(domain => hostname?.includes(domain));
-
-  if (!isAllowedDomain) {
-    return NextResponse.redirect(new URL('https://www.leadstrack.in'));
-  }
-
-  // If on leadstrack.in without www, redirect to www
-  if (hostname === 'leadstrack.in') {
-    const newUrl = new URL(request.nextUrl.pathname, `https://www.${hostname}`);
+  // Only redirect non-www to www in production
+  if (process.env.NODE_ENV === 'production' && hostname === 'leadstrack.in') {
+    const newUrl = new URL(pathname, `https://www.leadstrack.in`);
     return NextResponse.redirect(newUrl);
   }
 
