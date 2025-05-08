@@ -6,6 +6,11 @@ interface ExtendedToken extends JWT {
   accessToken?: string;
 }
 
+const isDevelopment = process.env.NODE_ENV !== "production";
+const callbackUrl = isDevelopment 
+  ? "http://localhost:3000/api/auth/callback/facebook"
+  : "https://www.leadstrack.in/api/auth/callback/facebook";
+
 const handler = NextAuth({
   providers: [
     FacebookProvider({
@@ -15,6 +20,17 @@ const handler = NextAuth({
         url: "https://www.facebook.com/v18.0/dialog/oauth",
         params: {
           scope: "pages_show_list,pages_read_engagement",
+        },
+      },
+      callbacks: {
+        async redirect({ url, baseUrl }) {
+          const finalUrl = url.startsWith('/') ? new URL(url, baseUrl).toString() : url;
+          const allowedHosts = ['localhost:3000', 'www.leadstrack.in', 'leadstrack.in'];
+          const urlObj = new URL(finalUrl);
+          if (allowedHosts.includes(urlObj.host)) {
+            return finalUrl;
+          }
+          return baseUrl;
         },
       },
     }),
