@@ -124,7 +124,7 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {pages.map((page) => (
             <div
               key={page.id}
@@ -133,7 +133,7 @@ export default function Home() {
                   ? "ring-2 ring-blue-500"
                   : ""
               }`}
-            ></div>
+            >
               <div className="flex items-center gap-4">
                 {page.picture && (
                   <img
@@ -152,7 +152,7 @@ export default function Home() {
                       ? "bg-blue-500 text-white"
                       : "bg-gray-200 hover:bg-gray-300"
                   }`}
-                ></button>
+                >
                   {selectedPages.some(p => p.id === page.id) ? "Selected" : "Select"}
                 </button>
               </div>
@@ -177,12 +177,12 @@ export default function Home() {
         )}
 
         {leads.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-6"></div>
+          <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-2xl font-bold mb-4">Leads</h2>
             {leads.map((pageLeads) => {
               const page = pages.find(p => p.id === pageLeads.pageId);
               return (
-                <div key={pageLeads.pageId} className="mb-6"></div>
+                <div key={pageLeads.pageId} className="mb-6">
                   <h3 className="text-xl font-semibold mb-3">
                     {page?.name || "Unknown Page"}
                   </h3>
@@ -197,7 +197,7 @@ export default function Home() {
                       </thead>
                       <tbody>
                         {pageLeads.leads.map((lead) => (
-                          <tr key={lead.id} className="border-t"></tr>
+                          <tr key={lead.id} className="border-t">
                             <td className="px-4 py-2">{lead.id}</td>
                             <td className="px-4 py-2">
                               {new Date(lead.created_time).toLocaleString()}
