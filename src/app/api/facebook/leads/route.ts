@@ -24,7 +24,7 @@ export async function POST(request: Request) {
         const pageToken = pageTokens[index];
         try {
           const response = await fetch(
-            `https://graph.facebook.com/v18.0/${pageId}/leads?access_token=${pageToken}&fields=id,created_time,ad_id,form_id,field_data`,
+            `https://graph.facebook.com/v22.0/${pageId}/leads?access_token=${pageToken}&fields=id,created_time,ad_id,form_id,field_data`,
             {
               headers: {
                 'Accept': 'application/json',

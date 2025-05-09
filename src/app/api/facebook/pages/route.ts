@@ -13,7 +13,7 @@ export async function GET() {
     
     // First, get basic user info
     const userResponse = await fetch(
-      `https://graph.facebook.com/v18.0/me?fields=id,name,email,picture&access_token=${accessToken}`,
+      `https://graph.facebook.com/v22.0/me?fields=id,name,email,picture&access_token=${accessToken}`,
       {
         headers: {
           'Accept': 'application/json',
@@ -31,7 +31,7 @@ export async function GET() {
 
     // Then get pages with detailed information
     const pagesResponse = await fetch(
-      `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token,picture,category,fan_count,link,verification_status,tasks&access_token=${accessToken}`,
+      `https://graph.facebook.com/v22.0/me/accounts?fields=id,name,access_token,picture,category,fan_count,link,verification_status,tasks&access_token=${accessToken}`,
       {
         headers: {
           'Accept': 'application/json',
