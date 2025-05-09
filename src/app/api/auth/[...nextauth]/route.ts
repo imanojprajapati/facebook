@@ -12,6 +12,7 @@ const handler = NextAuth({
       clientId: process.env.FACEBOOK_CLIENT_ID!,
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
       authorization: {
+        url: "https://www.facebook.com/v18.0/dialog/oauth",
         params: {
           scope: "email,pages_show_list,pages_read_engagement,pages_manage_metadata,public_profile,leads_retrieval"
         }
