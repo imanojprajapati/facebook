@@ -3,8 +3,9 @@
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { FaFacebook } from "react-icons/fa";
+import { Suspense } from "react";
 
-export default function AuthError() {
+function ErrorContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
 
@@ -24,21 +25,35 @@ export default function AuthError() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-red-600 mb-2">Authentication Error</h1>
-          <p className="text-gray-600">{getErrorMessage(error || "")}</p>
-        </div>
-
-        <button
-          onClick={() => signIn("facebook", { callbackUrl: "/" })}
-          className="w-full flex items-center justify-center gap-3 bg-facebook hover:bg-facebook-hover text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-        >
-          <FaFacebook size={24} />
-          <span className="font-semibold">Try Again with Facebook</span>
-        </button>
+    <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-bold text-red-600 mb-2">Authentication Error</h1>
+        <p className="text-gray-600">{getErrorMessage(error || "")}</p>
       </div>
+
+      <button
+        onClick={() => signIn("facebook", { callbackUrl: "/" })}
+        className="w-full flex items-center justify-center gap-3 bg-facebook hover:bg-facebook-hover text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+      >
+        <FaFacebook size={24} />
+        <span className="font-semibold">Try Again with Facebook</span>
+      </button>
+    </div>
+  );
+}
+
+export default function AuthError() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <Suspense 
+        fallback={
+          <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        }
+      >
+        <ErrorContent />
+      </Suspense>
     </div>
   );
 }
