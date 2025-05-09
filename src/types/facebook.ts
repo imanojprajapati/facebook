@@ -44,6 +44,17 @@ export interface Lead {
   field_data: LeadField[];
 }
 
+// Add the missing FacebookLead interface
+export interface FacebookLead extends Lead {
+  // Extends the base Lead interface
+}
+
+// Add the missing LeadsRequest interface
+export interface LeadsRequest {
+  pageIds: string[];
+  pageTokens: string[];
+}
+
 export interface LeadResponse {
   pageId: string;
   leads: Lead[];

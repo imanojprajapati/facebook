@@ -75,7 +75,6 @@ const nextConfig = {
   experimental: {
     // Enable modern optimizations
     optimizePackageImports: ['react-icons'],
-    optimizeFonts: true,
     scrollRestoration: true,
   },
   compiler: {
