@@ -5,7 +5,7 @@ export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host');
   const pathname = request.nextUrl.pathname;
 
-  // Skip middleware for these paths to prevent infinite loops
+  // Skip middleware for these paths
   if (
     pathname.startsWith('/api') ||
     pathname.startsWith('/_next') ||
@@ -17,10 +17,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Only redirect non-www to www in production
-  if (process.env.NODE_ENV === 'production' && hostname === 'leadstrack.in') {
-    const newUrl = new URL(pathname, `https://www.leadstrack.in`);
-    return NextResponse.redirect(newUrl);
+  // Handle redirects based on environment
+  if (process.env.NODE_ENV === 'production') {
+    // Only redirect non-www to www in production
+    if (hostname === 'leadstrack.in') {
+      return NextResponse.redirect(new URL(pathname, `https://www.leadstrack.in`));
+    }
   }
 
   return NextResponse.next();

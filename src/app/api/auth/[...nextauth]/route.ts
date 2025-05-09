@@ -51,8 +51,13 @@ const handler = NextAuth({
       return session;
     },
     async redirect({ url, baseUrl }) {
+      // Handle redirect URLs more permissively
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      if (new URL(url).origin === baseUrl) return url;
+      if (url.startsWith("http://localhost:") || 
+          url.startsWith("https://www.leadstrack.in") ||
+          url.startsWith("https://leadstrack.in")) {
+        return url;
+      }
       return baseUrl;
     }
   }
