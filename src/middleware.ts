@@ -1,43 +1,43 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { rateLimiter } from './middleware/rateLimit';
 
-export function middleware(request: NextRequest) {
-  const hostname = request.headers.get('host');
-  const pathname = request.nextUrl.pathname;
-
-  // Skip middleware for these paths
-  if (
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/static') ||
-    pathname.includes('.') ||
-    pathname === '/favicon.ico' ||
-    pathname.startsWith('/_vercel')
-  ) {
-    return NextResponse.next();
-  }
-
-  // Handle redirects based on environment
-  if (process.env.NODE_ENV === 'production') {
-    // Only redirect non-www to www in production
-    if (hostname === 'leadstrack.in') {
-      return NextResponse.redirect(new URL(pathname, `https://www.leadstrack.in`));
+export async function middleware(request: NextRequest) {
+  // Only apply rate limiting to API routes
+  if (request.nextUrl.pathname.startsWith('/api')) {
+    const response = rateLimiter(request);
+    if (response.status === 429) {
+      return response;
     }
   }
 
-  return NextResponse.next();
+  // Add security headers to all responses
+  const response = NextResponse.next();
+  
+  // Common security headers
+  response.headers.set('X-DNS-Prefetch-Control', 'on');
+  response.headers.set('X-XSS-Prefetch-Control', '1; mode=block');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Add CSP header if not already set in next.config.js
+  if (!response.headers.has('Content-Security-Policy')) {
+    response.headers.set(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.fbcdn.net https://*.facebook.com https://graph.facebook.com; connect-src 'self' https://graph.facebook.com;"
+    );
+  }
+
+  return response;
 }
 
+// Configure which paths to apply middleware to
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * 1. /api routes
-     * 2. /_next (Next.js internals)
-     * 3. /.next (Next.js internals)
-     * 4. /static (static files)
-     * 5. all root files inside public (e.g. /favicon.ico)
-     */
-    '/((?!api|_next|_static|_vercel|[\\w-]+\\.\\w+).*)',
+    // Apply to all API routes
+    '/api/:path*',
+    // Apply to all pages except static assets and api routes (which are handled above)
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

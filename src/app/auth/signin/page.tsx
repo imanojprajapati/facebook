@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { FaFacebook } from "react-icons/fa";
-import { useState } from "react";
+import Link from "next/link";
 
 export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
@@ -44,10 +45,14 @@ export default function SignIn() {
         </button>
 
         <div className="mt-6 text-center text-sm text-gray-600">
-          <p>By continuing, you agree to our</p>
-          <a href="/privacy-policy" className="text-facebook hover:text-facebook-hover underline">
-            Privacy Policy
-          </a>
+          <p>By continuing, you agree to our{" "}
+            <Link 
+              href="/privacy-policy" 
+              className="text-facebook hover:text-facebook-hover underline"
+            >
+              Privacy Policy
+            </Link>
+          </p>
         </div>
       </div>
     </div>

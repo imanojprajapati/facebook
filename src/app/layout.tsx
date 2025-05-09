@@ -1,25 +1,34 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { Providers } from "./providers";
+import './globals.css'
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import { Providers } from './providers'
+import { KeyboardCheatSheet } from '@/components/KeyboardCheatSheet'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: "Facebook Integration",
-  description: "Connect and manage your Facebook pages",
-};
+  title: 'Facebook Pages Manager',
+  description: 'Manage your Facebook pages efficiently',
+  manifest: '/manifest.json',
+  themeColor: '#1877f2',
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        <ErrorBoundary>
+          <Providers>
+            {children}
+            <KeyboardCheatSheet />
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
-  );
+  )
 }

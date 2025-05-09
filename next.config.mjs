@@ -12,6 +12,9 @@ const nextConfig = {
       'scontent.xx.fbcdn.net',
       'localhost'
     ],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    formats: ['image/webp'],
   },
   async headers() {
     return [
@@ -20,7 +23,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Strict-Transport-Security',
-            value: 'max-age=31536000; includeSubDomains'
+            value: 'max-age=31536000; includeSubDomains; preload'
           },
           {
             key: 'X-Frame-Options',
@@ -32,19 +35,55 @@ const nextConfig = {
           },
           {
             key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin'
+            value: 'strict-origin-when-cross-origin'
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.fbcdn.net https://*.facebook.com https://graph.facebook.com; connect-src 'self' https://graph.facebook.com; frame-ancestors 'none'; upgrade-insecure-requests;"
+          },
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
           }
         ],
       },
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version' },
+        ]
+      },
+      {
+        // Cache static assets
+        source: '/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
+          }
+        ]
+      }
     ]
   },
-  output: 'standalone',
+  experimental: {
+    // Enable modern optimizations
+    optimizePackageImports: ['react-icons'],
+    optimizeFonts: true,
+    scrollRestoration: true,
+  },
+  compiler: {
+    // Enable all compiler optimizations in production
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
   poweredByHeader: false,
-  env: {
-    NEXTAUTH_URL: process.env.NODE_ENV === 'production' 
-      ? 'https://www.leadstrack.in' 
-      : 'http://localhost:3000'
-  }
+  compress: true,
 };
 
 export default nextConfig;

@@ -1,59 +1,72 @@
-"use client";
+'use client';
 
-import { useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
-import { FaFacebook } from "react-icons/fa";
-import { Suspense } from "react";
-
-function ErrorContent() {
-  const searchParams = useSearchParams();
-  const error = searchParams.get("error");
-
-  const getErrorMessage = (error: string) => {
-    switch (error) {
-      case "Configuration":
-        return "There is a problem with the server configuration.";
-      case "AccessDenied":
-        return "You denied access to your Facebook account.";
-      case "OAuthSignin":
-        return "Error in constructing the Facebook authorization URL.";
-      case "OAuthCallback":
-        return "Error in handling the response from Facebook.";
-      default:
-        return "An unexpected error occurred. Please try again.";
-    }
-  };
-
-  return (
-    <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-red-600 mb-2">Authentication Error</h1>
-        <p className="text-gray-600">{getErrorMessage(error || "")}</p>
-      </div>
-
-      <button
-        onClick={() => signIn("facebook", { callbackUrl: "/" })}
-        className="w-full flex items-center justify-center gap-3 bg-facebook hover:bg-facebook-hover text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-      >
-        <FaFacebook size={24} />
-        <span className="font-semibold">Try Again with Facebook</span>
-      </button>
-    </div>
-  );
-}
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { FaExclamationTriangle, FaHome } from 'react-icons/fa';
+import Link from 'next/link';
 
 export default function AuthError() {
+  const searchParams = useSearchParams();
+  const [errorMessage, setErrorMessage] = useState<string>('');
+
+  useEffect(() => {
+    const error = searchParams.get('error');
+    let message = 'An authentication error occurred';
+
+    switch (error) {
+      case 'AccessDenied':
+        message = 'You denied access to your Facebook account';
+        break;
+      case 'Callback':
+        message = 'There was an error during the Facebook authentication process';
+        break;
+      case 'OAuthSignin':
+        message = 'Error starting the Facebook login process';
+        break;
+      case 'OAuthCallback':
+        message = 'Error completing the Facebook login';
+        break;
+      case 'TokenError':
+        message = 'Your session has expired. Please try logging in again';
+        break;
+      default:
+        if (error) {
+          message = error;
+        }
+    }
+
+    setErrorMessage(message);
+  }, [searchParams]);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <Suspense 
-        fallback={
-          <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
-            <p className="text-gray-600">Loading...</p>
-          </div>
-        }
-      >
-        <ErrorContent />
-      </Suspense>
+      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+        <div className="flex justify-center mb-6">
+          <FaExclamationTriangle className="text-5xl text-red-500" />
+        </div>
+        
+        <h1 className="text-2xl font-bold mb-4">Authentication Error</h1>
+        
+        <p className="text-gray-600 mb-8">{errorMessage}</p>
+        
+        <Link 
+          href="/"
+          className="inline-flex items-center justify-center gap-2 bg-facebook hover:bg-facebook-hover text-white px-6 py-3 rounded-lg transition-colors duration-200 w-full"
+        >
+          <FaHome size={20} />
+          <span>Return to Home</span>
+        </Link>
+
+        <p className="mt-6 text-sm text-gray-500">
+          Need help? Contact our{' '}
+          <a 
+            href="mailto:support@leadstrack.in"
+            className="text-facebook hover:text-facebook-hover underline"
+          >
+            support team
+          </a>
+        </p>
+      </div>
     </div>
   );
 }

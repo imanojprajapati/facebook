@@ -1,5 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
+import { apiClient } from "@/utils/api-client";
+import type { FacebookLead, LeadsRequest } from "@/types/facebook";
 
 export async function POST(request: Request) {
   const session = await getServerSession();
@@ -9,7 +11,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { pageIds, pageTokens } = await request.json();
+    const { pageIds, pageTokens } = await request.json() as LeadsRequest;
 
     if (!pageIds || !Array.isArray(pageIds) || !pageTokens || !Array.isArray(pageTokens)) {
       return NextResponse.json({ error: "Invalid request format" }, { status: 400 });
@@ -23,30 +25,13 @@ export async function POST(request: Request) {
       pageIds.map(async (pageId, index) => {
         const pageToken = pageTokens[index];
         try {
-          const response = await fetch(
-            `https://graph.facebook.com/v22.0/${pageId}/leads?access_token=${pageToken}&fields=id,created_time,ad_id,form_id,field_data`,
-            {
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-              }
-            }
+          const leadsData = await apiClient.get<{ data: FacebookLead[] }>(
+            `https://graph.facebook.com/v18.0/${pageId}/leads?access_token=${pageToken}&fields=id,created_time,ad_id,form_id,field_data`
           );
-          
-          const data = await response.json();
-          
-          if (data.error) {
-            console.error(`Error fetching leads for page ${pageId}:`, data.error);
-            return {
-              pageId,
-              error: data.error.message,
-              leads: []
-            };
-          }
 
           return {
             pageId,
-            leads: data.data || []
+            leads: leadsData.data
           };
         } catch (error) {
           console.error(`Error fetching leads for page ${pageId}:`, error);
