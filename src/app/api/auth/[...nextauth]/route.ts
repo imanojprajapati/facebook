@@ -14,8 +14,17 @@ const handler = NextAuth({
       authorization: {
         url: "https://www.facebook.com/v18.0/dialog/oauth",
         params: {
-          scope: "email,pages_show_list,pages_read_engagement,pages_manage_metadata,public_profile,leads_retrieval"
+          scope: "email,pages_show_list,pages_read_engagement,pages_manage_metadata,public_profile,leads_retrieval,user_link"
         }
+      },
+      profile(profile) {
+        return {
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture?.data?.url,
+          userLink: profile.link
+        };
       }
     }),
   ],
@@ -24,27 +33,21 @@ const handler = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  cookies: {
-    sessionToken: {
-      name: `${process.env.NODE_ENV === "production" ? "__Secure-" : ""}next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        domain: process.env.NODE_ENV === "production" ? ".leadstrack.in" : undefined
-      }
-    }
+  pages: {
+    signIn: "/auth/signin",
+    error: "/auth/error",
   },
   callbacks: {
-    async jwt({ token, account }): Promise<ExtendedToken> {
+    async jwt({ token, account, profile }): Promise<ExtendedToken> {
       if (account) {
         token.accessToken = account.access_token;
+        token.id = profile?.id;
       }
       return token;
     },
     async session({ session, token }: { session: any; token: ExtendedToken }) {
       session.accessToken = token.accessToken;
+      session.userId = token.id;
       return session;
     },
     async redirect({ url, baseUrl }) {

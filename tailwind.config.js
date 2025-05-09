@@ -8,11 +8,8 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        facebook: {
-          DEFAULT: '#1877F2',
-          hover: '#166FE5',
-          dark: '#1554AF',
-        }
+        facebook: '#1877F2',
+        'facebook-hover': '#0C63D4'
       }
     },
   },

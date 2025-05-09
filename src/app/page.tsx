@@ -1,110 +1,86 @@
 "use client";
 
-import { useSession, signIn, signOut } from "next-auth/react";
-import { useState, useEffect } from "react";
-import { FaFacebook } from "react-icons/fa";
+import { useSession, signIn } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { FaFacebook, FaSpinner } from "react-icons/fa";
 
 interface FacebookPage {
   id: string;
   name: string;
   access_token: string;
-  picture?: {
+  picture: {
     data: {
       url: string;
     };
   };
+  category: string;
+  fan_count: number;
+  link: string;
+  verification_status: string;
 }
 
-interface Lead {
-  id: string;
-  created_time: string;
-  field_data: Array<{
+interface FacebookData {
+  user: {
+    id: string;
     name: string;
-    values: string[];
-  }>;
-}
-
-interface PageLeads {
-  pageId: string;
-  leads: Lead[];
+    email: string;
+    picture: {
+      data: {
+        url: string;
+      };
+    };
+  };
+  pages: FacebookPage[];
 }
 
 export default function Home() {
-  const { data: session } = useSession();
-  const [pages, setPages] = useState<FacebookPage[]>([]);
-  const [selectedPages, setSelectedPages] = useState<FacebookPage[]>([]);
-  const [leads, setLeads] = useState<PageLeads[]>([]);
+  const { data: session, status } = useSession();
+  const [fbData, setFbData] = useState<FacebookData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (session?.accessToken) {
-      fetchPages();
-    }
+    const fetchFacebookData = async () => {
+      if (session?.accessToken) {
+        setLoading(true);
+        setError(null);
+        try {
+          const response = await fetch("/api/facebook/pages");
+          const data = await response.json();
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          setFbData(data);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Failed to fetch Facebook data");
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchFacebookData();
   }, [session]);
 
-  const fetchPages = async () => {
-    try {
-      const response = await fetch("/api/facebook/pages");
-      const result = await response.json();
-      if (result.data) {
-        setPages(result.data);
-      }
-    } catch (error) {
-      console.error("Error fetching pages:", error);
-    }
-  };
-
-  const togglePageSelection = (page: FacebookPage) => {
-    setSelectedPages(prev => {
-      const isSelected = prev.some(p => p.id === page.id);
-      if (isSelected) {
-        return prev.filter(p => p.id !== page.id);
-      }
-      return [...prev, page];
-    });
-  };
-
-  const fetchLeads = async () => {
-    if (selectedPages.length === 0) {
-      alert("Please select at least one page");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch("/api/facebook/leads", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          pageIds: selectedPages.map(page => page.id),
-          pageTokens: selectedPages.map(page => page.access_token),
-        }),
-      });
-      
-      const result = await response.json();
-      if (result.data) {
-        setLeads(result.data);
-      }
-    } catch (error) {
-      console.error("Error fetching leads:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <FaSpinner className="animate-spin text-4xl text-facebook" />
+      </div>
+    );
+  }
 
   if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-8 rounded-lg shadow-md text-center">
-          <h1 className="text-2xl font-bold mb-4">Facebook Pages Manager</h1>
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+          <h1 className="text-2xl font-bold mb-6">Connect Your Facebook Account</h1>
           <button
             onClick={() => signIn("facebook")}
-            className="flex items-center justify-center gap-2 bg-[#1877F2] text-white px-6 py-3 rounded-md hover:bg-[#166FE5] transition-colors"
+            className="flex items-center justify-center gap-2 bg-facebook hover:bg-facebook-hover text-white px-6 py-3 rounded-lg w-full transition-colors duration-200"
           >
             <FaFacebook size={24} />
-            Sign in with Facebook
+            <span>Connect with Facebook</span>
           </button>
         </div>
       </div>
@@ -112,116 +88,78 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen p-8 bg-gray-100">
+    <div className="min-h-screen bg-gray-100 py-8 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Your Facebook Pages</h1>
-          <button
-            onClick={() => signOut()}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-          >
-            Sign Out
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {pages.map((page) => (
-            <div
-              key={page.id}
-              className={`bg-white p-4 rounded-lg shadow transition-all ${
-                selectedPages.some(p => p.id === page.id)
-                  ? "ring-2 ring-blue-500"
-                  : ""
-              }`}
-            >
+        {loading ? (
+          <div className="flex justify-center">
+            <FaSpinner className="animate-spin text-4xl text-facebook" />
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
+            {error}
+          </div>
+        ) : fbData ? (
+          <>
+            {/* User Profile Section */}
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
               <div className="flex items-center gap-4">
-                {page.picture && (
-                  <img
-                    src={page.picture.data.url}
-                    alt={page.name}
-                    className="w-12 h-12 rounded-full"
-                  />
-                )}
-                <div className="flex-1">
-                  <h3 className="font-semibold">{page.name}</h3>
+                <img
+                  src={fbData.user.picture?.data?.url}
+                  alt={fbData.user.name}
+                  className="w-16 h-16 rounded-full"
+                />
+                <div>
+                  <h2 className="text-2xl font-bold">{fbData.user.name}</h2>
+                  <p className="text-gray-600">{fbData.user.email}</p>
                 </div>
-                <button
-                  onClick={() => togglePageSelection(page)}
-                  className={`px-3 py-1 rounded ${
-                    selectedPages.some(p => p.id === page.id)
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200 hover:bg-gray-300"
-                  }`}
-                >
-                  {selectedPages.some(p => p.id === page.id) ? "Selected" : "Select"}
-                </button>
               </div>
             </div>
-          ))}
-        </div>
 
-        {pages.length > 0 && (
-          <div className="text-center mb-8">
-            <button
-              onClick={fetchLeads}
-              disabled={loading || selectedPages.length === 0}
-              className={`bg-green-500 text-white px-6 py-3 rounded-md ${
-                loading || selectedPages.length === 0
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-green-600"
-              }`}
-            >
-              {loading ? "Loading..." : "Fetch Leads"}
-            </button>
-          </div>
-        )}
-
-        {leads.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold mb-4">Leads</h2>
-            {leads.map((pageLeads) => {
-              const page = pages.find(p => p.id === pageLeads.pageId);
-              return (
-                <div key={pageLeads.pageId} className="mb-6">
-                  <h3 className="text-xl font-semibold mb-3">
-                    {page?.name || "Unknown Page"}
-                  </h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full table-auto">
-                      <thead>
-                        <tr className="bg-gray-50">
-                          <th className="px-4 py-2">Lead ID</th>
-                          <th className="px-4 py-2">Created</th>
-                          <th className="px-4 py-2">Information</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pageLeads.leads.map((lead) => (
-                          <tr key={lead.id} className="border-t">
-                            <td className="px-4 py-2">{lead.id}</td>
-                            <td className="px-4 py-2">
-                              {new Date(lead.created_time).toLocaleString()}
-                            </td>
-                            <td className="px-4 py-2">
-                              <ul>
-                                {lead.field_data.map((field, i) => (
-                                  <li key={i}>
-                                    <strong>{field.name}:</strong>{" "}
-                                    {field.values.join(", ")}
-                                  </li>
-                                ))}
-                              </ul>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+            {/* Facebook Pages Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {fbData.pages.map((page) => (
+                <div key={page.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
+                  <div className="p-6">
+                    <div className="flex items-center gap-4 mb-4">
+                      <img
+                        src={page.picture?.data?.url}
+                        alt={page.name}
+                        className="w-12 h-12 rounded-lg"
+                      />
+                      <div>
+                        <h3 className="font-bold">{page.name}</h3>
+                        <p className="text-sm text-gray-600">{page.category}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <p>Likes: {page.fan_count?.toLocaleString()}</p>
+                      <p>
+                        Status:{" "}
+                        <span
+                          className={`inline-block px-2 py-1 rounded ${
+                            page.verification_status === "verified"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {page.verification_status || "Not verified"}
+                        </span>
+                      </p>
+                    </div>
+                    <a
+                      href={page.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 inline-block text-facebook hover:text-facebook-hover"
+                    >
+                      View Page →
+                    </a>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              ))}
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   );
