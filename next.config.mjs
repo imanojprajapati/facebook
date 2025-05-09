@@ -9,7 +9,8 @@ const nextConfig = {
       'graph.facebook.com',
       'platform-lookaside.fbsbx.com',
       'static.xx.fbcdn.net',
-      'scontent.xx.fbcdn.net'
+      'scontent.xx.fbcdn.net',
+      'localhost'
     ],
   },
   async headers() {

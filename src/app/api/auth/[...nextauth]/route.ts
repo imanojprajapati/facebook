@@ -13,7 +13,7 @@ const handler = NextAuth({
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: "email,pages_show_list,pages_read_engagement,pages_manage_metadata,public_profile"
+          scope: "email,pages_show_list,pages_read_engagement,pages_manage_metadata,public_profile,leads_retrieval"
         }
       }
     }),
@@ -47,15 +47,8 @@ const handler = NextAuth({
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Handle production and development URLs
-      if (url.startsWith("/")) {
-        return `${baseUrl}${url}`;
-      } else if (url.startsWith("http")) {
-        const urlObj = new URL(url);
-        if (urlObj.hostname === "www.leadstrack.in" || urlObj.hostname === "localhost") {
-          return url;
-        }
-      }
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
       return baseUrl;
     }
   }
