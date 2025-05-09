@@ -106,7 +106,7 @@ export function PageCard({
           {isExpanded && (
             <div className="mt-4">
               {loadingLeads ? (
-                <LoadingSpinner size="md" />
+                <LoadingSpinner size="medium" />
               ) : leads ? (
                 leads.error ? (
                   <div className="text-red-500 text-sm">{leads.error}</div>

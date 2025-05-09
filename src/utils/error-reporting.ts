@@ -27,9 +27,21 @@ class ErrorReporter {
   private readonly maxQueueSize = 50;
   private readonly flushInterval = 60000; // 1 minute
   private readonly environment: string;
+  private isClient: boolean;
+  private hasInitialized: boolean = false;
 
   private constructor() {
     this.environment = process.env.NODE_ENV || 'development';
+    this.isClient = false; // Initialize as false, will be updated during init
+    this.initializeIfClient();
+  }
+
+  private initializeIfClient() {
+    // Skip if already initialized or in server environment
+    if (this.hasInitialized || typeof window === 'undefined') return;
+    
+    this.isClient = true;
+    this.hasInitialized = true;
     this.setupGlobalHandlers();
     this.startPeriodicFlush();
   }
@@ -42,6 +54,8 @@ class ErrorReporter {
   }
 
   private setupGlobalHandlers() {
+    if (!this.isClient || typeof window === 'undefined') return;
+
     window.addEventListener('error', (event) => {
       this.captureError(event.error || new Error(event.message));
     });
@@ -52,15 +66,20 @@ class ErrorReporter {
   }
 
   private startPeriodicFlush() {
+    if (!this.isClient || typeof window === 'undefined') return;
+
     setInterval(() => this.flush(), this.flushInterval);
   }
 
   public captureError(error: Error | unknown, context: Record<string, any> = {}) {
+    // Initialize client-side features if needed
+    this.initializeIfClient();
+
     const errorReport: ErrorReport = {
       message: sanitizeErrorMessage(error instanceof Error ? error.message : String(error)),
       stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString(),
-      url: window.location.href,
+      url: this.isClient ? window.location.href : 'server',
       type: error instanceof Error ? error.name : 'Unknown'
     };
 

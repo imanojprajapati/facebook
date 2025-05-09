@@ -1,16 +1,24 @@
 import './globals.css'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Providers } from './providers'
-import { KeyboardCheatSheet } from '@/components/KeyboardCheatSheet'
+import dynamic from 'next/dynamic'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const inter = Inter({ subsets: ['latin'] })
+
+const KeyboardCheatSheet = dynamic(
+  () => import('@/components/KeyboardCheatSheet').then(mod => mod.default),
+  { ssr: false }
+)
 
 export const metadata: Metadata = {
   title: 'Facebook Pages Manager',
   description: 'Manage your Facebook pages efficiently',
   manifest: '/manifest.json',
+}
+
+export const viewport: Viewport = {
   themeColor: '#1877f2',
 }
 

@@ -15,7 +15,7 @@ export function useFocusManager<T extends HTMLElement>({
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const getFocusableElements = useCallback(() => {
-    if (!containerRef.current) return [];
+    if (!containerRef.current || typeof document === 'undefined') return [];
     
     return Array.from(
       containerRef.current.querySelectorAll<HTMLElement>(
@@ -30,7 +30,7 @@ export function useFocusManager<T extends HTMLElement>({
   }, []);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || typeof document === 'undefined') return;
 
     // Store the previously focused element
     previousFocusRef.current = document.activeElement as HTMLElement;
@@ -52,7 +52,7 @@ export function useFocusManager<T extends HTMLElement>({
   }, [enabled, getFocusableElements, restoreFocus]);
 
   useEffect(() => {
-    if (!enabled || !trapFocus) return;
+    if (!enabled || !trapFocus || typeof document === 'undefined') return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Tab') return;

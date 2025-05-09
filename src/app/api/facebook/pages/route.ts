@@ -3,6 +3,11 @@ import { NextResponse } from "next/server";
 import { apiClient } from "@/utils/api-client";
 import type { FacebookData, FacebookUser, FacebookPage } from "@/types/facebook";
 
+interface FacebookAPIError {
+  code: number;
+  message: string;
+}
+
 export async function GET() {
   const session = await getServerSession();
   
@@ -24,9 +29,10 @@ export async function GET() {
       pages: pagesData.data
     } satisfies FacebookData);
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching Facebook data:', error);
-    if (error?.code === 190) {
+    const fbError = error as FacebookAPIError;
+    if (fbError?.code === 190) {
       return NextResponse.json({ error: "Invalid access token" }, { status: 401 });
     }
     return NextResponse.json({ 

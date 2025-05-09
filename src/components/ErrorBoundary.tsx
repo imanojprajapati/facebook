@@ -2,7 +2,7 @@
 
 import React, { Component, ErrorInfo } from 'react';
 import { useLiveAnnouncer } from './LiveAnnouncer';
-import { error } from '@/utils/error-reporting';
+import { errorReporter } from '@/utils/error-reporting';
 
 interface Props {
   children: React.ReactNode;
@@ -31,8 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    error('Error caught by ErrorBoundary:', {
-      error,
+    errorReporter.captureError(error, {
       errorInfo,
       location: window.location.href
     });

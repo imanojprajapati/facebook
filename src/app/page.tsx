@@ -9,7 +9,7 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { PageCard } from "@/components/PageCard";
 import Image from "next/image";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { KeyboardShortcutsHelp } from "@/components/KeyboardShortcutsHelp";
+import KeyboardShortcutsHelp from "@/components/KeyboardShortcutsHelp";
 import { usePerformanceMonitoring } from "@/hooks/usePerformanceMonitoring";
 
 export default function Home() {

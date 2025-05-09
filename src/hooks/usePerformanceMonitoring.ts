@@ -2,15 +2,15 @@ import { useEffect, useRef } from 'react';
 import { errorReporter } from '@/utils/error-reporting';
 
 interface PerformanceMetrics {
-  timeToFirstByte: number;
-  firstContentfulPaint: number;
-  largestContentfulPaint: number;
-  firstInputDelay: number;
-  cumulativeLayoutShift: number;
+  timeToFirstByte?: number;
+  firstContentfulPaint?: number;
+  largestContentfulPaint?: number;
+  firstInputDelay?: number;
+  cumulativeLayoutShift?: number;
 }
 
 export function usePerformanceMonitoring(componentName: string) {
-  const metricsRef = useRef<Partial<PerformanceMetrics>>({});
+  const metricsRef = useRef<PerformanceMetrics>({});
 
   useEffect(() => {
     try {
@@ -40,7 +40,7 @@ export function usePerformanceMonitoring(componentName: string) {
 
       // First Input Delay (FID)
       const fidObserver = new PerformanceObserver((entryList) => {
-        const firstInput = entryList.getEntries()[0];
+        const firstInput = entryList.getEntries()[0] as PerformanceEventTiming;
         metricsRef.current.firstInputDelay = firstInput.processingStart - firstInput.startTime;
       });
       fidObserver.observe({ entryTypes: ['first-input'] });

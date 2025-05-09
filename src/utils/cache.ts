@@ -30,7 +30,9 @@ class Cache {
     // Remove oldest entry if we're at capacity
     if (this.storage.size >= this.config.maxSize) {
       const oldestKey = this.storage.keys().next().value;
-      this.storage.delete(oldestKey);
+      if (oldestKey) {
+        this.storage.delete(oldestKey);
+      }
     }
 
     this.storage.set(key, {

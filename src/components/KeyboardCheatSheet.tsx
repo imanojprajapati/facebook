@@ -1,12 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
+import { useState, useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 
-export function KeyboardCheatSheet() {
+const KeyboardShortcutsHelp = dynamic(() => import('./KeyboardShortcutsHelp'), {
+  ssr: false,
+  loading: () => <div>Loading...</div>
+});
+
+export default function KeyboardCheatSheet() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
         event.key === '?' &&
@@ -26,5 +33,9 @@ export function KeyboardCheatSheet() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  return <KeyboardShortcutsHelp isOpen={isOpen} onClose={() => setIsOpen(false)} />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      {isOpen && <KeyboardShortcutsHelp isOpen={isOpen} onClose={() => setIsOpen(false)} />}
+    </Suspense>
+  );
 }

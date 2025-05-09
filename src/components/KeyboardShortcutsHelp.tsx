@@ -9,15 +9,27 @@ interface Props {
   onClose: () => void;
 }
 
-export function KeyboardShortcutsHelp({ isOpen, onClose }: Props) {
+export default function KeyboardShortcutsHelp({ isOpen, onClose }: Props) {
   const [shortcuts] = useState(() => [
     { key: '?', description: 'Show/hide keyboard shortcuts', handler: onClose },
-    { key: 'h', description: 'Go to home', handler: () => window.location.href = '/' },
-    { key: '/', description: 'Focus search', handler: () => document.querySelector<HTMLInputElement>('input[type="search"]')?.focus() },
+    { 
+      key: 'h', 
+      description: 'Go to home', 
+      handler: () => typeof window !== 'undefined' && (window.location.href = '/') 
+    },
+    { 
+      key: '/', 
+      description: 'Focus search', 
+      handler: () => typeof window !== 'undefined' && document.querySelector<HTMLInputElement>('input[type="search"]')?.focus() 
+    },
     { key: 'Escape', description: 'Close dialogs', handler: onClose },
     { key: 'j', description: 'Next item', handler: () => {} },
     { key: 'k', description: 'Previous item', handler: () => {} },
-    { key: 'r', description: 'Refresh page data', handler: () => window.location.reload() },
+    { 
+      key: 'r', 
+      description: 'Refresh page data', 
+      handler: () => typeof window !== 'undefined' && window.location.reload() 
+    },
   ]);
 
   const { getShortcuts } = useKeyboardShortcuts(shortcuts);
@@ -28,6 +40,8 @@ export function KeyboardShortcutsHelp({ isOpen, onClose }: Props) {
   });
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
         onClose();

@@ -1,5 +1,5 @@
 import { retryWithBackoff } from './retry';
-import type { FacebookResponse, FacebookError } from '@/types/facebook';
+import type { FacebookApiResponse, FacebookError } from '@/types/facebook';
 
 class ApiError extends Error {
   code?: number;
@@ -29,7 +29,7 @@ export async function fetchWithRetry<T>(
       },
     });
 
-    const data: FacebookResponse<T> = await response.json();
+    const data: FacebookApiResponse<T> = await response.json();
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
