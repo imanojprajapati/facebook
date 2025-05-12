@@ -30,38 +30,50 @@ export async function GET(
   request: Request,
   { params }: { params: { pageId: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  
-  if (!session?.accessToken) {
-    console.log('❌ No session or access token found');
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
   try {
-    console.log('🔄 Fetching leads for page:', params.pageId);
-
-    // First, get the page access token
-    const pageData = await apiClient.fetchFromGraph<PageData>(
-      `${params.pageId}`,
-      session.accessToken,
-      { fields: 'access_token' }
-    );
-
-    if (!pageData.access_token) {
-      console.log('❌ No page access token found');
-      throw new Error('Could not get page access token');
+    // Validate session
+    const session = await getServerSession(authOptions);
+    if (!session?.accessToken) {
+      console.log('❌ No session or access token found');
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    console.log('✅ Got page access token');
+    console.log('🔍 Starting leads fetch for page:', params.pageId);
 
-    // Get all lead forms for the page
+    // Get page access token
+    const pageData = await apiClient.fetchFromGraph<PageData>(
+      params.pageId,
+      session.accessToken,
+      { fields: 'access_token,name,id' }
+    );
+
+    if (!pageData?.access_token) {
+      console.error('❌ No page access token found');
+      return NextResponse.json(
+        { error: 'Could not get page access token. Make sure you have admin access to this page.' },
+        { status: 403 }
+      );
+    }
+
+    console.log('✅ Successfully got page access token');
+
+    // Get lead forms
     const formsResponse = await apiClient.fetchFromGraph<{ data: LeadgenForm[] }>(
       `${params.pageId}/leadgen_forms`,
-      pageData.access_token,      { 
+      pageData.access_token,
+      { 
         fields: 'id,name,status,leads_count,created_time',
         limit: '100'
       }
     );
+
+    if (!formsResponse?.data) {
+      console.error('❌ No forms data received from Facebook');
+      return NextResponse.json(
+        { error: 'Failed to fetch lead forms data' },
+        { status: 500 }
+      );
+    }
 
     console.log('📋 Found lead forms:', {
       count: formsResponse.data.length,
@@ -81,10 +93,15 @@ export async function GET(
           const leadResponse = await apiClient.fetchFromGraph<{ data: Lead[] }>(
             `${form.id}/leads`,
             pageData.access_token,
-            {              fields: 'id,created_time,field_data',
+            {
+              fields: 'id,created_time,field_data',
               limit: '100'
             }
           );
+
+          if (!leadResponse?.data) {
+            throw new Error('No leads data received from Facebook');
+          }
 
           console.log(`✅ Found ${leadResponse.data.length} leads for form: ${form.name}`);
 
@@ -105,30 +122,37 @@ export async function GET(
       })
     );
 
-    console.log('📊 Final response data:', {
+    const stats = {
       formCount: formsResponse.data.length,
       totalLeads: leads.reduce((sum, form) => sum + form.leads.length, 0),
-      formsWithLeads: leads.filter(form => form.leads.length > 0).length
-    });
+      formsWithLeads: leads.filter(form => form.leads.length > 0).length,
+      formsWithErrors: leads.filter(form => 'error' in form).length
+    };
+
+    console.log('📊 Final response stats:', stats);
 
     return NextResponse.json({
       forms: formsResponse.data,
-      leads: leads
+      leads,
+      stats
     });
 
   } catch (error) {
-    console.error('❌ Error fetching leads:', error);
+    console.error('❌ Error in leads fetching process:', error);
     errorReporter.reportFacebookError(error, {
       context: 'fetch_leads',
       pageId: params.pageId
     });
+
+    const statusCode = error instanceof Error && 
+      error.message.includes('access token') ? 403 : 500;
 
     return NextResponse.json(
       { 
         error: "Failed to fetch leads",
         details: error instanceof Error ? error.message : "Unknown error"
       },
-      { status: 500 }
+      { status: statusCode }
     );
   }
 }
