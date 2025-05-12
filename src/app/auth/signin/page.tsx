@@ -50,16 +50,18 @@ function SignInContent() {
       }
     }
   }, [searchParams]);
-
   const handleFacebookLogin = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
+      // Log the exact URL being used
+      console.log('Current URL:', window.location.href);
+      console.log('Callback URL:', new URL('/api/auth/callback/facebook', window.location.origin).href);
+      
       const result = await signIn("facebook", { 
         callbackUrl,
-        redirect: false,
-        scope: REQUIRED_PERMISSIONS.join(",")
+        redirect: true // Changed to true for direct redirection
       });
 
       if (result?.error) {

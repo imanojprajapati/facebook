@@ -24,6 +24,15 @@ Object.entries(requiredEnvVars).forEach(([key, value]) => {
   }
 });
 
+// Ensure we have proper URLs for callbacks
+const getBaseUrl = () => {
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+  // Development fallback
+  return 'http://localhost:3000';
+};
+
 const handler = NextAuth({
   debug: process.env.NODE_ENV === 'development',
   logger: {
