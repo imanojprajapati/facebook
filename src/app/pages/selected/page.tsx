@@ -28,11 +28,21 @@ function SelectedPagesContent() {
       try {
         const response = await fetch('/api/facebook/pages');
         if (!response.ok) throw new Error('Failed to fetch pages');
-        
-        const data = await response.json();
-        const selectedPages = data.pages.filter((page: FacebookPage) => 
+          const data = await response.json();
+        console.log('📘 Facebook Pages Data:', data);
+          const selectedPages = data.pages.filter((page: FacebookPage) => 
           pageIds.includes(page.id)
         );
+        console.log('🔍 Selected Pages:', {
+          total: data.pages.length,
+          selected: selectedPages.length,
+          pages: selectedPages.map((page: FacebookPage) => ({
+            id: page.id,
+            name: page.name,
+            category: page.category,
+            verified: page.verification_status === 'verified'
+          }))
+        });
         setPages(selectedPages);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load pages');
@@ -119,14 +129,19 @@ function SelectedPagesContent() {
                   </svg>
                 )}
               </div>
-              <p className="text-sm text-gray-500">{page.category}</p>
-              <div className="mt-2">
+              <p className="text-sm text-gray-500">{page.category}</p>            <div className="mt-2 flex items-center gap-4">
                 <span className="text-sm text-gray-600">
                   {page.fan_count?.toLocaleString() || 0} fans
                 </span>
               </div>
             </div>
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 flex items-center gap-4">
+              <Link
+                href={`/pages/${page.id}/leads`}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+              >
+                View Leads
+              </Link>
               {page.link && (
                 <a
                   href={page.link}

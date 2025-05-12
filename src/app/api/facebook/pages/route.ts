@@ -25,7 +25,8 @@ export async function GET() {
     }, { status: 401 });
   }
 
-  try {
+  try {    console.log('🔄 Fetching Facebook data...');
+    
     const [userData, pagesData] = await Promise.all([
       apiClient.fetchFromGraph<FacebookUser>(
         'me',
@@ -42,6 +43,24 @@ export async function GET() {
         }
       )
     ]);
+
+    console.log('👤 User Data:', {
+      id: userData.id,
+      name: userData.name,
+      email: userData.email,
+      hasProfilePicture: !!userData.picture
+    });
+
+    console.log('📑 Pages Data:', {
+      totalPages: pagesData.data.length,
+      pages: pagesData.data.map(page => ({
+        id: page.id,
+        name: page.name,
+        category: page.category,
+        fanCount: page.fan_count,
+        verified: page.verification_status === 'verified'
+      }))
+    });
 
     return NextResponse.json({
       user: userData,
