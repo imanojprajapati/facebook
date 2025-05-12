@@ -48,14 +48,14 @@ export const authOptions: AuthOptions = {
       clientId: process.env.FACEBOOK_CLIENT_ID!,
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
       authorization: {
-        url: "https://www.facebook.com/v18.0/dialog/oauth",
+        url: "https://www.facebook.com/v19.0/dialog/oauth",
         params: {
-          scope: REQUIRED_PERMISSIONS.join(","),
+          scope: "pages_show_list,leads_retrieval,pages_read_engagement,pages_manage_metadata",
           auth_type: "rerequest"
         }
       },
       userinfo: {
-        url: "https://graph.facebook.com/v18.0/me",
+        url: "https://graph.facebook.com/v19.0/me",
         params: { 
           fields: "id,name,email,picture.type(large)"
         }
@@ -74,13 +74,36 @@ export const authOptions: AuthOptions = {
     async signIn({ user, account, profile }: { user: User; account: Account | null; profile?: Profile }) {
       try {
         if (account?.provider === 'facebook' && account.access_token) {
+          // First validate permissions
           const hasPermissions = await validateFacebookPermissions(
             account.access_token,
             [...REQUIRED_PERMISSIONS]
           );
+          
           if (!hasPermissions) {
             console.error('Missing required Facebook permissions');
-            return false;
+            errorReporter.report(new Error('Missing Facebook permissions'), {
+              userId: user.id,
+              provider: "facebook",
+              context: "permissions"
+            });
+            return `/auth/error?error=permissions`;
+          }
+
+          // Then validate the token
+          try {
+            const response = await fetch(
+              `https://graph.facebook.com/v19.0/debug_token?input_token=${account.access_token}&access_token=${account.access_token}`
+            );
+            const data = await response.json();
+            
+            if (!data.data?.is_valid) {
+              console.error('Invalid Facebook token');
+              return `/auth/error?error=invalid_token`;
+            }
+          } catch (error) {
+            console.error('Token validation error:', error);
+            return `/auth/error?error=token_validation`;
           }
         }
         return true;
@@ -90,7 +113,7 @@ export const authOptions: AuthOptions = {
           userId: user.id,
           provider: "facebook"
         });
-        return false;
+        return `/auth/error?error=signin`;
       }
     },
     async jwt({ token, account }: { token: JWT; account: Account | null }) {

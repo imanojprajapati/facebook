@@ -9,6 +9,19 @@ import { useState, useEffect } from 'react';
 
 // Error solutions mapping
 const errorSolutions: Record<string, string[]> = {
+  permissions: [
+    'Make sure to accept ALL required Facebook permissions:',
+    '- Pages Show List',
+    '- Leads Retrieval',
+    '- Pages Read Engagement',
+    '- Pages Manage Metadata',
+    'Log out of Facebook completely and try again'
+  ],
+  invalid_token: [
+    'Your Facebook session has expired',
+    'Please log out and log back in',
+    'Make sure you\'re using the same Facebook account'
+  ],
   AccessDenied: [
     'Make sure to accept all required Facebook permissions',
     'Your Facebook account must be an admin of the pages you want to manage',
@@ -39,9 +52,16 @@ function ErrorContent() {
 
   useEffect(() => {
     const error = searchParams.get('error');
-    let message = 'An authentication error occurred';
-
-    switch (error) {
+    let message = 'An authentication error occurred';    switch (error) {
+      case 'permissions':
+        message = 'Missing required Facebook permissions';
+        break;
+      case 'invalid_token':
+        message = 'Your Facebook session is invalid';
+        break;
+      case 'token_validation':
+        message = 'Could not validate Facebook access';
+        break;
       case 'AccessDenied':
         message = 'Facebook permissions were not granted';
         break;

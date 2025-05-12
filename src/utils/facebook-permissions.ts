@@ -6,7 +6,8 @@ import { retryWithBackoff } from './retry';
 export const REQUIRED_PERMISSIONS = [
   "pages_show_list",
   "pages_read_engagement",
-  "pages_read_user_content"
+  "leads_retrieval",
+  "pages_manage_metadata"
 ] as const;
 
 export type FacebookPermission = typeof REQUIRED_PERMISSIONS[number];

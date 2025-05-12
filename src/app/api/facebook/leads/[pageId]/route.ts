@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { apiClient } from "@/utils/api-client";
 import { errorReporter } from "@/utils/error-reporting";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { validateFacebookPermissions, REQUIRED_PERMISSIONS } from "@/utils/facebook-permissions";
 
 interface LeadgenForm {
   id: string;
@@ -38,6 +39,25 @@ export async function GET(
     if (!session?.accessToken) {
       console.log('❌ No session or access token found');
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    // Step 1.5: Validate Facebook permissions
+    try {
+      const hasPermissions = await validateFacebookPermissions(session.accessToken);
+      if (!hasPermissions) {
+        console.log('❌ Missing required Facebook permissions');
+        return NextResponse.json({ 
+          error: "Insufficient permissions",
+          details: "Missing required Facebook permissions. Please ensure you have granted all necessary permissions.",
+          required: REQUIRED_PERMISSIONS
+        }, { status: 403 });
+      }
+    } catch (error: any) {
+      console.error('❌ Error validating permissions:', error);
+      return NextResponse.json({
+        error: "Permission validation failed",
+        details: error.message
+      }, { status: 403 });
     }
 
     console.log('🔍 Starting leads fetch for page:', params.pageId);

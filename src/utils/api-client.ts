@@ -2,7 +2,7 @@ import { retryWithBackoff } from './retry';
 import { errorReporter } from './error-reporting';
 import type { FacebookApiResponse, FacebookError, FacebookErrorResponse } from '@/types/facebook';
 
-const FACEBOOK_API_VERSION = 'v18.0';
+const FACEBOOK_API_VERSION = 'v19.0';
 const FACEBOOK_GRAPH_URL = 'https://graph.facebook.com';
 
 class ApiError extends Error {
