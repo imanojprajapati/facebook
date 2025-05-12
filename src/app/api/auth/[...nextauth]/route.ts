@@ -15,7 +15,6 @@ const requiredEnvVars = {
   FACEBOOK_CLIENT_SECRET: process.env.FACEBOOK_CLIENT_SECRET,
   NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
   NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-  FACEBOOK_CALLBACK_URL: process.env.FACEBOOK_CALLBACK_URL,
 };
 
 Object.entries(requiredEnvVars).forEach(([key, value]) => {
@@ -179,18 +178,8 @@ const handler = NextAuth({
         });
         throw error;
       }
-    },
-    async redirect({ url, baseUrl }) {
-      // Use custom callback URL if provided
-      const callbackUrl = process.env.FACEBOOK_CALLBACK_URL;
-      if (callbackUrl) {
-        const callbackBaseUrl = new URL(callbackUrl).origin;
-        if (url.startsWith("/")) return `${callbackBaseUrl}${url}`;
-        if (url.startsWith(callbackBaseUrl)) return url;
-        return callbackBaseUrl;
-      }
-
-      // Fallback to default behavior
+    },    async redirect({ url, baseUrl }) {
+      // Always use the baseUrl to ensure consistent redirect handling
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       if (url.startsWith(baseUrl)) return url;
       return baseUrl;
