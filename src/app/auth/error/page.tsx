@@ -1,16 +1,41 @@
 'use client';
 
 import { Suspense } from 'react';
-import { FaExclamationTriangle, FaHome } from 'react-icons/fa';
+import { FaExclamationTriangle, FaHome, FaFacebook } from 'react-icons/fa';
 import Link from 'next/link';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
-// Separate component to use useSearchParams
+// Error solutions mapping
+const errorSolutions: Record<string, string[]> = {
+  AccessDenied: [
+    'Make sure to accept all required Facebook permissions',
+    'Your Facebook account must be an admin of the pages you want to manage',
+    'Try logging out of Facebook completely and logging back in'
+  ],
+  Callback: [
+    'Clear your browser cookies and cache',
+    'Try using a different browser',
+    'Check if you have any browser extensions blocking Facebook'
+  ],
+  OAuthSignin: [
+    'Enable cookies in your browser',
+    'Disable any ad blockers or privacy extensions',
+    'Try using a private/incognito window'
+  ],
+  default: [
+    'Try logging in again',
+    'Make sure you\'re using a supported browser',
+    'Contact support if the issue persists'
+  ]
+};
+
 function ErrorContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [solutions, setSolutions] = useState<string[]>([]);
 
   useEffect(() => {
     const error = searchParams.get('error');
@@ -18,19 +43,19 @@ function ErrorContent() {
 
     switch (error) {
       case 'AccessDenied':
-        message = 'You denied access to your Facebook account';
+        message = 'Facebook permissions were not granted';
         break;
       case 'Callback':
-        message = 'There was an error during the Facebook authentication process';
+        message = 'Error connecting to Facebook';
         break;
       case 'OAuthSignin':
-        message = 'Error starting the Facebook login process';
+        message = 'Could not start Facebook login';
         break;
       case 'OAuthCallback':
-        message = 'Error completing the Facebook login';
+        message = 'Facebook login was interrupted';
         break;
       case 'TokenError':
-        message = 'Your session has expired. Please try logging in again';
+        message = 'Your session has expired';
         break;
       default:
         if (error) {
@@ -39,51 +64,57 @@ function ErrorContent() {
     }
 
     setErrorMessage(message);
+    setSolutions(errorSolutions[error as keyof typeof errorSolutions] || errorSolutions.default);
   }, [searchParams]);
+
+  const handleTryAgain = () => {
+    router.push('/auth/signin');
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
         <div className="flex justify-center mb-6">
           <FaExclamationTriangle className="text-5xl text-red-500" />
         </div>
         
-        <h1 className="text-2xl font-bold mb-4">Authentication Error</h1>
-        
-        <p className="text-gray-600 mb-8">{errorMessage}</p>
-        
-        <Link 
-          href="/"
-          className="inline-flex items-center justify-center gap-2 bg-facebook hover:bg-facebook-hover text-white px-6 py-3 rounded-lg transition-colors duration-200 w-full"
-        >
-          <FaHome size={20} />
-          <span>Return to Home</span>
-        </Link>
+        <h1 className="text-2xl font-bold mb-4 text-center">Authentication Error</h1>
+        <p className="text-gray-600 mb-6 text-center">{errorMessage}</p>
 
-        <p className="mt-6 text-sm text-gray-500">
-          Need help? Contact our{' '}
-          <a 
-            href="mailto:support@leadstrack.in"
-            className="text-facebook hover:text-facebook-hover underline"
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-3">Try these solutions:</h2>
+          <ul className="list-disc pl-5 space-y-2">
+            {solutions.map((solution, index) => (
+              <li key={index} className="text-gray-600">{solution}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="flex flex-col space-y-3">
+          <button
+            onClick={handleTryAgain}
+            className="flex items-center justify-center w-full bg-[#1877f2] text-white py-2 px-4 rounded-lg hover:bg-[#166fe5] transition-colors"
           >
-            support team
-          </a>
-        </p>
+            <FaFacebook className="mr-2" />
+            Try Again
+          </button>
+          
+          <Link
+            href="/"
+            className="flex items-center justify-center w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <FaHome className="mr-2" />
+            Return Home
+          </Link>
+        </div>
       </div>
     </div>
   );
 }
 
-// Main component with Suspense boundary
-export default function AuthError() {
+export default function ErrorPage() {
   return (
-    <Suspense 
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <LoadingSpinner size="large" />
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingSpinner />}>
       <ErrorContent />
     </Suspense>
   );

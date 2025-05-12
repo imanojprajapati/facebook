@@ -79,8 +79,7 @@ const handler = NextAuth({
           id: profile.id,
           name: profile.name,
           email: profile.email,
-          image: profile.picture?.data?.url,
-          userLink: profile.link
+          image: `https://graph.facebook.com/${profile.id}/picture?type=large`
         };
       }
     }),
@@ -108,27 +107,30 @@ const handler = NextAuth({
           profile: profile ? { id: profile.id, email: profile.email } : null
         });
         
-        if (!account?.access_token) {
-          console.error("No access token received from Facebook");
-          throw new Error("No access token received");
-        }
+        if (account?.provider === 'facebook') {
+          if (!account?.access_token) {
+            console.error("No access token received from Facebook");
+            throw new Error("No access token received");
+          }
 
-        // Validate required permissions
-        const requiredPermissions = [
-          "email",
-          "pages_show_list",
-          "pages_read_engagement",
-          "pages_manage_metadata",
-          "leads_retrieval"
-        ];
+          // Validate required permissions
+          const requiredPermissions = [
+            "email",
+            "pages_show_list",
+            "pages_read_engagement",
+            "pages_manage_metadata",
+            "leads_retrieval"
+          ];
 
-        const hasPermissions = await validateFacebookPermissions(
-          account.access_token,
-          requiredPermissions
-        );
+          const hasPermissions = await validateFacebookPermissions(
+            account.access_token,
+            requiredPermissions
+          );
 
-        if (!hasPermissions) {
-          throw new Error("Missing required Facebook permissions");
+          if (!hasPermissions) {
+            console.error('Missing required Facebook permissions');
+            return false;
+          }
         }
         
         return true;
