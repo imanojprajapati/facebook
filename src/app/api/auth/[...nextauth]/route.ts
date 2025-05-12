@@ -85,7 +85,8 @@ const handler = NextAuth({
           email: profile.email,
           image: `https://graph.facebook.com/${profile.id}/picture?type=large`
         };
-      }
+      },
+      allowDangerousEmailAccountLinking: true // Only if you're sure the email from Facebook is verified
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
