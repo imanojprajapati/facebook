@@ -7,22 +7,57 @@ interface RetryConfig {
   onRetry?: (error: Error, attempt: number) => void;
 }
 
-const defaultConfig: Required<Omit<RetryConfig, 'onRetry'>> = {
+const defaultConfig: Required<Omit<RetryConfig, 'onRetry' | 'shouldRetry'>> = {
   maxRetries: 3,
-  initialDelay: 1000, // Start with 1 second delay
-  maxDelay: 10000,    // Maximum delay of 10 seconds
-  factor: 2,          // Exponential factor
-  shouldRetry: () => true
+  initialDelay: 1000,
+  maxDelay: 10000,
+  factor: 2,
 };
+
+// Facebook specific error codes that should not be retried
+const NON_RETRYABLE_FB_CODES = new Set([
+  190,  // Invalid OAuth access token
+  200,  // Permission error
+  10,   // Application does not have permission
+  2500, // Invalid API version
+]);
+
+function isFacebookError(error: any): error is { error: { code: number; message: string } } {
+  return error?.error?.code && typeof error.error.code === 'number';
+}
+
+function shouldRetryFacebookError(error: any): boolean {
+  if (isFacebookError(error)) {
+    // Don't retry if error code is in non-retryable set
+    if (NON_RETRYABLE_FB_CODES.has(error.error.code)) {
+      return false;
+    }
+    
+    // Retry rate limiting errors
+    if (error.error.code === 4 || error.error.code === 17) {
+      return true;
+    }
+    
+    // Retry on temporary Facebook errors
+    if (error.error.code >= 1 && error.error.code <= 3) {
+      return true;
+    }
+  }
+
+  // Retry on network errors
+  if (error instanceof TypeError && error.message.includes('network')) {
+    return true;
+  }
+
+  // Default to retry on unknown errors
+  return true;
+}
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * Calculates the next delay using exponential backoff with jitter
- */
-function getNextDelay(retryCount: number, config: Required<Omit<RetryConfig, 'onRetry'>>): number {
+function getNextDelay(retryCount: number, config: Required<Omit<RetryConfig, 'onRetry' | 'shouldRetry'>>): number {
   const exponentialDelay = config.initialDelay * Math.pow(config.factor, retryCount);
   const boundedDelay = Math.min(exponentialDelay, config.maxDelay);
   // Add random jitter between 0-25% of the delay
@@ -30,14 +65,16 @@ function getNextDelay(retryCount: number, config: Required<Omit<RetryConfig, 'on
   return boundedDelay + jitter;
 }
 
-/**
- * Executes a function with retry logic using exponential backoff
- */
 export async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   config: RetryConfig = {}
 ): Promise<T> {
-  const finalConfig = { ...defaultConfig, ...config };
+  const finalConfig = {
+    ...defaultConfig,
+    shouldRetry: config.shouldRetry || shouldRetryFacebookError,
+    ...config,
+  };
+  
   let lastError: Error | null = null;
 
   for (let retryCount = 0; retryCount <= finalConfig.maxRetries; retryCount++) {
@@ -45,36 +82,21 @@ export async function retryWithBackoff<T>(
       if (retryCount > 0) {
         const delayMs = getNextDelay(retryCount - 1, finalConfig);
         await delay(delayMs);
+        
+        if (finalConfig.onRetry && lastError) {
+          finalConfig.onRetry(lastError, retryCount);
+        }
       }
       
       return await fn();
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       
-      // Check if we should retry this error
-      if (!finalConfig.shouldRetry(lastError)) {
+      if (retryCount === finalConfig.maxRetries || !finalConfig.shouldRetry(lastError)) {
         throw lastError;
-      }
-
-      // On last attempt, throw the error
-      if (retryCount === finalConfig.maxRetries) {
-        throw lastError;
-      }
-
-      // Call onRetry callback if provided
-      if (finalConfig.onRetry) {
-        finalConfig.onRetry(lastError, retryCount + 1);
-      }
-
-      // Log retry attempt in development
-      if (process.env.NODE_ENV === 'development') {
-        console.warn(
-          `Retry attempt ${retryCount + 1}/${finalConfig.maxRetries}:`, 
-          lastError instanceof Error ? lastError.message : lastError
-        );
       }
     }
   }
 
-  throw lastError;
+  throw lastError; // This line should never be reached due to the throw in the catch block
 }

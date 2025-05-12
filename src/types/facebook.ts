@@ -19,16 +19,23 @@ export interface FacebookPagePicture {
   };
 }
 
+// Update FacebookPage interface with more specific fields
 export interface FacebookPage {
   id: string;
   name: string;
-  category: string;
   access_token: string;
-  tasks: string[];
+  picture: {
+    data: {
+      url: string;
+      width: number;
+      height: number;
+    };
+  };
+  category: string;
   fan_count?: number;
-  verification_status?: 'verified' | 'not_verified';
-  picture?: FacebookPagePicture;
   link?: string;
+  verification_status?: 'verified' | 'not_verified';
+  tasks: string[];
 }
 
 export interface LeadField {
@@ -44,15 +51,28 @@ export interface Lead {
   field_data: LeadField[];
 }
 
-// Add the missing FacebookLead interface
 export interface FacebookLead extends Lead {
-  // Extends the base Lead interface
+  campaign_name?: string;
+  platform?: string;
+  customer_lead_form_id: string;
+  custom_disclaimer_responses?: Array<{
+    checkbox_key: string;
+    response: 'checked' | 'unchecked';
+  }>;
 }
 
-// Add the missing LeadsRequest interface
 export interface LeadsRequest {
   pageIds: string[];
   pageTokens: string[];
+}
+
+export interface LeadsResponse {
+  data: Array<{
+    pageId: string;
+    leads: FacebookLead[];
+    error?: string;
+  }>;
+  total: number;
 }
 
 export interface LeadResponse {
@@ -66,17 +86,26 @@ export interface FacebookData {
   pages: FacebookPage[];
 }
 
+export interface FacebookSession {
+  accessToken: string;
+  expires: string;
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
+}
+
 export interface FacebookError {
   message: string;
   type: string;
   code: number;
   error_subcode?: number;
-  fbtrace_id: string;
+  fbtrace_id?: string;
 }
 
 export interface FacebookApiResponse<T> {
-  data?: T;
-  error?: FacebookError;
+  data: T;
   paging?: {
     cursors: {
       before: string;
@@ -85,6 +114,11 @@ export interface FacebookApiResponse<T> {
     next?: string;
     previous?: string;
   };
+  error?: FacebookError;
+}
+
+export interface FacebookErrorResponse {
+  error: FacebookError;
 }
 
 // OAuth related types
@@ -100,5 +134,35 @@ export interface FacebookScope {
 }
 
 export interface FacebookUserPermissions {
-  data: FacebookScope[];
+  data: Array<{
+    permission: string;
+    status: 'granted' | 'declined';
+  }>;
+}
+
+export interface FacebookAuthError {
+  error: {
+    message: string;
+    type: string;
+    code: number;
+    fbtrace_id: string;
+  };
+}
+
+export interface FacebookAuthResponse {
+  authResponse: {
+    accessToken: string;
+    expiresIn: number;
+    reauthorize_required_in: number;
+    signedRequest: string;
+    userID: string;
+  };
+  status: 'connected' | 'not_authorized' | 'unknown';
+}
+
+export interface FacebookLoginOptions {
+  scope: string;
+  return_scopes: boolean;
+  enable_profile_selector?: boolean;
+  auth_type?: 'rerequest' | 'reauthenticate' | 'reauthorize';
 }

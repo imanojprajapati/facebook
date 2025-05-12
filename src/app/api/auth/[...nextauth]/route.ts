@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import FacebookProvider from "next-auth/providers/facebook";
 import { JWT } from "next-auth/jwt";
 import { errorReporter } from "@/utils/error-reporting";
-import { validateFacebookPermissions } from "@/utils/facebook-permissions";
+import { validateFacebookPermissions, REQUIRED_PERMISSIONS, type FacebookPermission } from "@/utils/facebook-permissions";
 
 interface ExtendedToken extends JWT {
   accessToken?: string;
@@ -39,6 +39,18 @@ const handler = NextAuth({
       console.warn('NextAuth warning:', code);
     },
   },
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        domain: process.env.NODE_ENV === 'production' ? '.leadstrack.in' : undefined
+      }
+    },
+  },
   providers: [
     FacebookProvider({
       clientId: process.env.FACEBOOK_CLIENT_ID!,
@@ -46,15 +58,7 @@ const handler = NextAuth({
       authorization: {
         url: "https://www.facebook.com/v18.0/dialog/oauth",
         params: {
-          scope: [
-            "email",
-            "pages_show_list",
-            "pages_read_engagement",
-            "pages_manage_metadata",
-            "leads_retrieval",
-            "pages_manage_ads",
-            "public_profile"
-          ].join(",")
+          scope: REQUIRED_PERMISSIONS.join(",")
         }
       },
       userinfo: {
@@ -107,24 +111,10 @@ const handler = NextAuth({
           profile: profile ? { id: profile.id, email: profile.email } : null
         });
         
-        if (account?.provider === 'facebook') {
-          if (!account?.access_token) {
-            console.error("No access token received from Facebook");
-            throw new Error("No access token received");
-          }
-
-          // Validate required permissions
-          const requiredPermissions = [
-            "email",
-            "pages_show_list",
-            "pages_read_engagement",
-            "pages_manage_metadata",
-            "leads_retrieval"
-          ];
-
+        if (account?.provider === 'facebook' && account.access_token) {
           const hasPermissions = await validateFacebookPermissions(
             account.access_token,
-            requiredPermissions
+            [...REQUIRED_PERMISSIONS]
           );
 
           if (!hasPermissions) {

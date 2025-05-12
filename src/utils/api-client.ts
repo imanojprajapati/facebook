@@ -1,6 +1,9 @@
 import { retryWithBackoff } from './retry';
 import { errorReporter } from './error-reporting';
-import type { FacebookApiResponse, FacebookError } from '@/types/facebook';
+import type { FacebookApiResponse, FacebookError, FacebookErrorResponse } from '@/types/facebook';
+
+const FACEBOOK_API_VERSION = 'v18.0';
+const FACEBOOK_GRAPH_URL = 'https://graph.facebook.com';
 
 class ApiError extends Error {
   code?: number;
@@ -19,103 +22,113 @@ class ApiError extends Error {
   }
 }
 
-// Helper function to identify transient errors
 function isTransientError(code?: number): boolean {
   if (!code) return false;
   
-  const transientCodes = [
+  const transientCodes = new Set([
     1,    // API Unknown
     2,    // API Service
     4,    // API Too Many Calls
     17,   // API User Too Many Calls
     341,  // Application limit reached
-    368,  // Temporary oauth error
-  ];
+    368,  // Temporary OAuth error
+    190,  // Invalid access token (might be temporary)
+    506,  // Duplicate request
+  ]);
 
-  return transientCodes.includes(code);
+  return transientCodes.has(code);
 }
 
-export async function fetchWithRetry<T>(
-  url: string, 
-  options: RequestInit = {}
-): Promise<T> {
-  return retryWithBackoff(async () => {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
-
-    const data: FacebookApiResponse<T> = await response.json();
-
-    if (!response.ok) {
-      const traceId = response.headers.get('x-fb-trace-id') || '';
-      const error = new ApiError({ 
-        message: `HTTP error! status: ${response.status}`,
-        code: response.status,
-        type: 'http_error',
-        fbtrace_id: traceId
-      });
-      error.response = response;
-      
-      await errorReporter.report(error, {
-        url,
-        status: response.status,
-        statusText: response.statusText,
-        traceId
-      });
-      throw error;
-    }
-
-    if (data.error) {
-      const apiError = new ApiError(data.error);
-      await errorReporter.reportFacebookError(data.error, {
-        url,
-        method: options.method || 'GET',
-      });
-      throw apiError;
-    }
-
-    return data.data as T;
-  }, {
-    maxRetries: 3,
-    shouldRetry: (error: Error) => {
-      if (error instanceof ApiError) {
-        // Only retry transient errors
-        return error.isTransient;
+async function handleFacebookResponse<T>(response: Response): Promise<T> {
+  const contentType = response.headers.get('content-type');
+  const isJson = contentType?.includes('application/json');
+  
+  if (!response.ok) {
+    let error: FacebookError;
+    
+    try {
+      if (isJson) {
+        const errorData = await response.json() as FacebookErrorResponse;
+        error = errorData.error;
+      } else {
+        error = {
+          message: `HTTP ${response.status}: ${response.statusText}`,
+          code: response.status,
+          type: 'http_error',
+          fbtrace_id: response.headers.get('x-fb-trace-id') || undefined
+        };
       }
-      // Retry on network errors or 5xx responses
-      return true;
+    } catch {
+      error = {
+        message: 'Failed to parse error response',
+        code: response.status,
+        type: 'parse_error',
+        fbtrace_id: response.headers.get('x-fb-trace-id') || undefined
+      };
     }
-  });
+
+    const apiError = new ApiError(error);
+    apiError.response = response;
+    throw apiError;
+  }
+
+  if (!isJson) {
+    throw new Error('Expected JSON response from Facebook API');
+  }
+
+  return response.json();
 }
 
 export const apiClient = {
-  async get<T>(url: string, options: RequestInit = {}): Promise<T> {
-    return fetchWithRetry<T>(url, {
-      ...options,
-      method: 'GET',
+  async fetchFromGraph<T>(
+    path: string,
+    accessToken: string,
+    params: Record<string, string> = {}
+  ): Promise<T> {
+    const url = new URL(`${FACEBOOK_GRAPH_URL}/${FACEBOOK_API_VERSION}/${path}`);
+    url.searchParams.append('access_token', accessToken);
+    
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.append(key, value);
+    }
+
+    return retryWithBackoff(async () => {
+      try {
+        const response = await fetch(url.toString(), {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        return await handleFacebookResponse<T>(response);
+      } catch (error) {
+        // Track API errors
+        errorReporter.reportFacebookError(error, {
+          path,
+          params: Object.keys(params).join(',')
+        });
+        throw error;
+      }
+    }, {
+      maxRetries: 3,
+      initialDelay: 1000,
+      maxDelay: 5000
     });
   },
 
-  async post<T>(url: string, data: any, options: RequestInit = {}): Promise<T> {
-    return fetchWithRetry<T>(url, {
-      ...options,
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  // Helper method for Facebook Graph API calls
-  async fetchFromGraph<T>(endpoint: string, accessToken: string, params: Record<string, string> = {}): Promise<T> {
-    const searchParams = new URLSearchParams({
-      access_token: accessToken,
-      ...params,
-    });
-
-    return this.get<T>(`https://graph.facebook.com/v18.0/${endpoint}?${searchParams}`);
+  // Additional utility methods for specific Facebook API calls
+  async validateAccessToken(accessToken: string): Promise<boolean> {
+    try {
+      const response = await this.fetchFromGraph<{ data: { is_valid: boolean } }>(
+        'debug_token',
+        accessToken,
+        { input_token: accessToken }
+      );
+      return response.data.is_valid;
+    } catch (error) {
+      errorReporter.reportFacebookError(error, { context: 'token_validation' });
+      return false;
+    }
   }
 };

@@ -1,11 +1,13 @@
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { apiClient } from "@/utils/api-client";
-import type { FacebookData, FacebookUser, FacebookPage } from "@/types/facebook";
+import type { FacebookData, FacebookUser, FacebookPage, FacebookApiResponse } from "@/types/facebook";
+import { errorReporter } from "@/utils/error-reporting";
 
 interface FacebookAPIError {
   code: number;
   message: string;
+  type?: string;
 }
 
 export async function GET() {
@@ -16,28 +18,57 @@ export async function GET() {
   }
 
   try {
-    const userData = await apiClient.get<FacebookUser>(
-      `https://graph.facebook.com/v18.0/me?fields=id,name,email,picture&access_token=${session.accessToken}`
-    );
+    const [userData, pagesData] = await Promise.all([
+      apiClient.fetchFromGraph<FacebookUser>(
+        'me',
+        session.accessToken,
+        {
+          fields: 'id,name,email,picture'
+        }
+      ),
+      apiClient.fetchFromGraph<FacebookApiResponse<FacebookPage[]>>(
+        'me/accounts',
+        session.accessToken,
+        {
+          fields: 'id,name,access_token,picture,category,fan_count,link,verification_status,tasks'
+        }
+      )
+    ]);
 
-    const pagesData = await apiClient.get<{ data: FacebookPage[] }>(
-      `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token,picture,category,fan_count,link,verification_status,tasks&access_token=${session.accessToken}`
-    );
-    
     return NextResponse.json({
       user: userData,
       pages: pagesData.data
     } satisfies FacebookData);
 
   } catch (error: unknown) {
-    console.error('Error fetching Facebook data:', error);
+    errorReporter.reportFacebookError(error, {
+      context: 'fetch_pages',
+      sessionId: session.accessToken?.slice(-8)
+    });
+
     const fbError = error as FacebookAPIError;
+    
     if (fbError?.code === 190) {
-      return NextResponse.json({ error: "Invalid access token" }, { status: 401 });
+      return NextResponse.json({ 
+        error: "Session expired. Please sign in again." 
+      }, { 
+        status: 401 
+      });
     }
+    
+    if (fbError?.code === 200 || fbError?.type === 'OAuthException') {
+      return NextResponse.json({ 
+        error: "Insufficient permissions. Please grant all required permissions." 
+      }, { 
+        status: 403 
+      });
+    }
+
     return NextResponse.json({ 
       error: "Failed to fetch Facebook data",
       details: error instanceof Error ? error.message : "Unknown error"
-    }, { status: 500 });
+    }, { 
+      status: 500 
+    });
   }
 }

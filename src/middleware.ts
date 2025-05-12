@@ -5,6 +5,12 @@ import { rateLimiter } from './middleware/rateLimit';
 const PRODUCTION_DOMAIN = 'leadstrack.in';
 
 export async function middleware(request: NextRequest) {
+  // Skip middleware for auth-related paths
+  if (request.nextUrl.pathname.startsWith('/api/auth') ||
+      request.nextUrl.pathname.startsWith('/auth')) {
+    return NextResponse.next();
+  }
+
   // Only apply rate limiting to API routes
   if (request.nextUrl.pathname.startsWith('/api')) {
     const response = rateLimiter(request);
