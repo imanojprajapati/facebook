@@ -40,12 +40,25 @@ export async function GET(
 
     console.log('🔍 Starting leads fetch for page:', params.pageId);
 
-    // Get page access token
-    const pageData = await apiClient.fetchFromGraph<PageData>(
-      params.pageId,
-      session.accessToken,
-      { fields: 'access_token,name,id' }
-    );
+    // Get page access token with retry
+    let pageData: PageData;
+    try {
+      pageData = await apiClient.fetchFromGraph<PageData>(
+        params.pageId,
+        session.accessToken,
+        { fields: 'access_token,name,id' }
+      );
+    } catch (error: any) {
+      console.error('❌ Failed to fetch page access token:', error);
+      const status = error.code === 190 ? 401 : // Invalid access token
+                    error.code === 100 ? 404 : // Page not found
+                    error.code === 200 ? 403 : // Permission error
+                    500;
+      return NextResponse.json({
+        error: 'Failed to get page access token',
+        details: error.message
+      }, { status });
+    }
 
     if (!pageData?.access_token) {
       console.error('❌ No page access token found');
@@ -57,15 +70,24 @@ export async function GET(
 
     console.log('✅ Successfully got page access token');
 
-    // Get lead forms
-    const formsResponse = await apiClient.fetchFromGraph<{ data: LeadgenForm[] }>(
-      `${params.pageId}/leadgen_forms`,
-      pageData.access_token,
-      { 
-        fields: 'id,name,status,leads_count,created_time',
-        limit: '100'
-      }
-    );
+    // Get lead forms with retry
+    let formsResponse;
+    try {
+      formsResponse = await apiClient.fetchFromGraph<{ data: LeadgenForm[] }>(
+        `${params.pageId}/leadgen_forms`,
+        pageData.access_token,
+        { 
+          fields: 'id,name,status,leads_count,created_time',
+          limit: '100'
+        }
+      );
+    } catch (error: any) {
+      console.error('❌ Failed to fetch lead forms:', error);
+      return NextResponse.json({
+        error: 'Failed to fetch lead forms',
+        details: error.message
+      }, { status: error.code === 200 ? 403 : 500 });
+    }
 
     if (!formsResponse?.data) {
       console.error('❌ No forms data received from Facebook');
@@ -84,7 +106,7 @@ export async function GET(
       }))
     });
 
-    // Get leads for each form
+    // Get leads for each form in parallel with individual error handling
     const leads = await Promise.all(
       formsResponse.data.map(async (form) => {
         try {
@@ -110,12 +132,13 @@ export async function GET(
             form_name: form.name,
             leads: leadResponse.data
           };
-        } catch (error) {
+        } catch (error: any) {
           console.error(`❌ Error fetching leads for form ${form.id}:`, error);
           return {
             form_id: form.id,
             form_name: form.name,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error.message,
+            errorCode: error.code,
             leads: []
           };
         }
@@ -131,26 +154,40 @@ export async function GET(
 
     console.log('📊 Final response stats:', stats);
 
+    // If all forms failed, return an error
+    if (stats.formsWithErrors === stats.formCount && stats.formCount > 0) {
+      const firstError = leads.find(form => 'error' in form);
+      return NextResponse.json({
+        error: 'Failed to fetch leads for all forms',
+        details: firstError?.error || 'Unknown error',
+        forms: formsResponse.data,
+        leads,
+        stats
+      }, { status: 500 });
+    }
+
     return NextResponse.json({
       forms: formsResponse.data,
       leads,
       stats
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error in leads fetching process:', error);
     errorReporter.reportFacebookError(error, {
       context: 'fetch_leads',
       pageId: params.pageId
     });
 
-    const statusCode = error instanceof Error && 
-      error.message.includes('access token') ? 403 : 500;
+    const statusCode = error.code === 190 ? 401 :  // Invalid access token
+                      error.code === 200 ? 403 :  // Permissions error
+                      500;
 
     return NextResponse.json(
       { 
         error: "Failed to fetch leads",
-        details: error instanceof Error ? error.message : "Unknown error"
+        details: error.message || "Unknown error",
+        code: error.code
       },
       { status: statusCode }
     );
