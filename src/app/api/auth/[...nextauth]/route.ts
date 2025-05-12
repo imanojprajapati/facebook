@@ -20,6 +20,7 @@ const requiredEnvVars = {
 Object.entries(requiredEnvVars).forEach(([key, value]) => {
   if (!value) {
     console.error(`Missing required environment variable: ${key}`);
+    throw new Error(`Missing required environment variable: ${key}`);
   }
 });
 
@@ -57,24 +58,14 @@ const handler = NextAuth({
       authorization: {
         url: "https://www.facebook.com/v18.0/dialog/oauth",
         params: {
-          scope: REQUIRED_PERMISSIONS.join(",")
+          scope: REQUIRED_PERMISSIONS.join(","),
+          auth_type: "rerequest"
         }
       },
       userinfo: {
         url: "https://graph.facebook.com/v18.0/me",
         params: { 
           fields: "id,name,email,picture.type(large)"
-        },
-        async request({ tokens, client, provider }) {
-          try {
-            return await client.userinfo(tokens.access_token!);
-          } catch (error) {
-            errorReporter.reportFacebookError(error, {
-              type: 'userinfo_error',
-              provider: 'facebook'
-            });
-            throw error;
-          }
         }
       },
       profile(profile) {
@@ -82,7 +73,7 @@ const handler = NextAuth({
           id: profile.id,
           name: profile.name,
           email: profile.email,
-          image: `https://graph.facebook.com/${profile.id}/picture?type=large`
+          image: profile.picture?.data?.url || `https://graph.facebook.com/${profile.id}/picture?type=large`
         };
       },
       allowDangerousEmailAccountLinking: true // Only if you're sure the email from Facebook is verified

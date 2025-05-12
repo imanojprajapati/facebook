@@ -8,7 +8,11 @@ export async function middleware(request: NextRequest) {
   // Skip middleware for auth-related paths
   if (request.nextUrl.pathname.startsWith('/api/auth') ||
       request.nextUrl.pathname.startsWith('/auth')) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    // Add necessary headers for auth routes
+    response.headers.set('Access-Control-Allow-Origin', 'https://www.facebook.com');
+    response.headers.set('Access-Control-Allow-Methods', 'GET,POST');
+    return response;
   }
 
   // Only apply rate limiting to API routes
@@ -25,19 +29,20 @@ export async function middleware(request: NextRequest) {
   // Common security headers
   response.headers.set('X-DNS-Prefetch-Control', 'on');
   response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN'); // Changed from DENY to allow Facebook OAuth
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   // Strict CSP for production
   const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https://*.fbcdn.net https://*.facebook.com https://graph.facebook.com",
-    `connect-src 'self' https://graph.facebook.com https://${PRODUCTION_DOMAIN} https://fonts.googleapis.com https://fonts.gstatic.com`,
-    "frame-ancestors 'none'",
+    "img-src 'self' data: blob: https://*.fbcdn.net https://*.facebook.com https://graph.facebook.com",
+    `connect-src 'self' https://graph.facebook.com https://*.facebook.com https://${PRODUCTION_DOMAIN} https://fonts.googleapis.com https://fonts.gstatic.com`,
+    "frame-src 'self' https://www.facebook.com",
+    "form-action 'self' https://www.facebook.com",
     "upgrade-insecure-requests"
   ].join('; ');
 
