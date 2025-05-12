@@ -31,14 +31,29 @@ export function PageSelector({ pages, onPagesSelected, isLoading = false }: Page
       </div>
     );
   }
+  const handleConfirm = () => {
+    if (selectedPages.size > 0) {
+      window.location.href = `/pages/selected?ids=${Array.from(selectedPages).join(',')}`;
+    }
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Select Pages to Manage</h2>
-        <span className="text-sm text-gray-500">
-          {selectedPages.size} of {pages.length} selected
-        </span>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-500">
+            {selectedPages.size} of {pages.length} selected
+          </span>
+          {selectedPages.size > 0 && (
+            <button
+              onClick={handleConfirm}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Continue with Selected Pages
+            </button>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {pages.map(page => (

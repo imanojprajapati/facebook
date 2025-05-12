@@ -30,7 +30,6 @@ const nextConfig = {
     ];
   },
   experimental: {
-    serverActions: true,
     scrollRestoration: true,
   },
   compiler: {
