@@ -4,13 +4,9 @@ import { errorReporter } from './error-reporting';
 import { retryWithBackoff } from './retry';
 
 export const REQUIRED_PERMISSIONS = [
-  "email",
   "pages_show_list",
   "pages_read_engagement",
-  "pages_read_user_content",
-  "leads_retrieval",
-  "pages_manage_metadata",
-  "public_profile"
+  "pages_read_user_content"
 ] as const;
 
 export type FacebookPermission = typeof REQUIRED_PERMISSIONS[number];
