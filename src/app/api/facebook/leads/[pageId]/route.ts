@@ -23,6 +23,8 @@ interface Lead {
 }
 
 interface PageData {
+  id: string;
+  name: string;
   access_token: string;
 }
 
@@ -31,7 +33,7 @@ export async function GET(
   { params }: { params: { pageId: string } }
 ) {
   try {
-    // Validate session
+    // Step 1: Validate session
     const session = await getServerSession(authOptions);
     if (!session?.accessToken) {
       console.log('❌ No session or access token found');
@@ -40,33 +42,39 @@ export async function GET(
 
     console.log('🔍 Starting leads fetch for page:', params.pageId);
 
-    // Get page access token
+    // Step 2: Get pages the user manages to find the correct page access token
     let pageData: PageData;
     try {
-      pageData = await apiClient.fetchFromGraph<PageData>(
-        params.pageId,
+      const pagesResponse = await apiClient.fetchFromGraph<{ 
+        data: Array<PageData>
+      }>(
+        'me/accounts',
         session.accessToken,
-        { fields: 'access_token,name,id' }
+        { fields: 'name,id,access_token' }
       );
+
+      // Find the specific page we want
+      const page = pagesResponse.data.find(p => p.id === params.pageId);
+      if (!page) {
+        console.error('❌ Page not found in user\'s accounts');
+        return NextResponse.json({
+          error: 'Page not found or no access',
+          details: 'The specified page was not found in your account list'
+        }, { status: 404 });
+      }
+
+      pageData = page;
+      console.log('✅ Found page:', page.name);
+
     } catch (error: any) {
-      console.error('❌ Failed to fetch page access token:', error);
+      console.error('❌ Failed to fetch pages:', error);
       return NextResponse.json({
-        error: 'Failed to get page access token',
+        error: 'Failed to get pages',
         details: error.message
       }, { status: error.code === 190 ? 401 : 500 });
     }
 
-    if (!pageData?.access_token) {
-      console.error('❌ No page access token found');
-      return NextResponse.json(
-        { error: 'Could not get page access token. Make sure you have admin access to this page.' },
-        { status: 403 }
-      );
-    }
-
-    console.log('✅ Successfully got page access token');
-
-    // Get lead forms with all necessary fields
+    // Step 3: Get lead forms for the page
     let formsResponse;
     try {
       formsResponse = await apiClient.fetchFromGraph<{ data: LeadgenForm[] }>(
@@ -77,6 +85,20 @@ export async function GET(
           limit: '100'
         }
       );
+
+      if (!formsResponse?.data) {
+        throw new Error('No forms data received');
+      }
+
+      console.log('📋 Found lead forms:', {
+        count: formsResponse.data.length,
+        forms: formsResponse.data.map(f => ({
+          id: f.id,
+          name: f.name,
+          leadCount: f.leads_count
+        }))
+      });
+
     } catch (error: any) {
       console.error('❌ Failed to fetch lead forms:', error);
       return NextResponse.json({
@@ -85,24 +107,7 @@ export async function GET(
       }, { status: error.code === 200 ? 403 : 500 });
     }
 
-    if (!formsResponse?.data) {
-      console.error('❌ No forms data received from Facebook');
-      return NextResponse.json(
-        { error: 'Failed to fetch lead forms data' },
-        { status: 500 }
-      );
-    }
-
-    console.log('📋 Found lead forms:', {
-      count: formsResponse.data.length,
-      forms: formsResponse.data.map(f => ({
-        id: f.id,
-        name: f.name,
-        leadCount: f.leads_count
-      }))
-    });
-
-    // Get leads for each form using the direct form ID endpoint
+    // Step 4: Get leads for each form
     const leads = await Promise.all(
       formsResponse.data.map(async (form) => {
         try {
@@ -156,6 +161,10 @@ export async function GET(
     console.log('📊 Final response stats:', stats);
 
     return NextResponse.json({
+      page: {
+        id: pageData.id,
+        name: pageData.name
+      },
       forms: formsResponse.data,
       leads,
       stats
