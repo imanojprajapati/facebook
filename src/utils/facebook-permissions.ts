@@ -7,9 +7,9 @@ export const REQUIRED_PERMISSIONS = [
   "email",
   "pages_show_list",
   "pages_read_engagement",
-  "pages_manage_metadata",
+  "pages_read_user_content",
   "leads_retrieval",
-  "pages_manage_ads",
+  "pages_manage_metadata",
   "public_profile"
 ] as const;
 
