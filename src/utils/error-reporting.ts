@@ -179,16 +179,71 @@ class ErrorReporter {
     }
   }
 
-  // Handle Facebook-specific errors
+  // Handle Facebook-specific errors with detailed reporting
   async reportFacebookError(error: any, context: ErrorContext = {}): Promise<void> {
     const fbError = new Error(error.message || 'Facebook API Error');
+    
+    // Extract Facebook error details
+    const fbErrorDetails = {
+      errorCode: error.code,
+      errorSubcode: error.error_subcode,
+      errorType: error.type,
+      fbTraceId: error.fbtrace_id,
+      isTransient: this.isFacebookTransientError(error.code),
+    };
+
+    // Get user-friendly error message
+    const userMessage = this.getFacebookErrorMessage(error.code, error.error_subcode);
+
     await this.report(fbError, {
       ...context,
       type: 'facebook_error',
-      code: error.code,
-      subcode: error.error_subcode,
-      fbTraceId: error.fbtrace_id,
+      errorDetails: fbErrorDetails,
+      userMessage,
     });
+
+    // Log additional debug information in development
+    if (process.env.NODE_ENV === 'development') {
+      console.group('Facebook Error Details');
+      console.error('Error:', error);
+      console.log('Error Type:', fbErrorDetails.errorType);
+      console.log('Error Code:', fbErrorDetails.errorCode);
+      console.log('Error Subcode:', fbErrorDetails.errorSubcode);
+      console.log('Trace ID:', fbErrorDetails.fbTraceId);
+      console.log('Is Transient:', fbErrorDetails.isTransient);
+      console.log('User Message:', userMessage);
+      console.groupEnd();
+    }
+  }
+
+  private isFacebookTransientError(code: number): boolean {
+    // Facebook error codes that typically indicate temporary issues
+    const transientErrors = [
+      1, // API Unknown
+      2, // API Service
+      4, // API Too Many Calls
+      17, // API User Too Many Calls
+      341, // Application limit reached
+      368, // Temporary oauth error
+    ];
+
+    return transientErrors.includes(code);
+  }
+
+  private getFacebookErrorMessage(code: number, subcode?: number): string {
+    const errorMessages: Record<number, string> = {
+      1: "Temporary Facebook service error. Please try again.",
+      2: "Facebook service is temporarily unavailable.",
+      4: "Too many requests. Please wait a few minutes and try again.",
+      17: "Request limit reached. Please try again later.",
+      190: "Facebook session expired. Please sign in again.",
+      200: "Permission error. Please check app permissions.",
+      341: "Application limit reached. Please try again later.",
+      368: "Temporary login error. Please try again.",
+      803: "Some permissions were not granted. Please try logging in again.",
+    };
+
+    return errorMessages[code] || "An error occurred with Facebook. Please try again.";
   }
 }
 

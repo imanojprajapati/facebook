@@ -1,10 +1,13 @@
 import { retryWithBackoff } from './retry';
+import { errorReporter } from './error-reporting';
 import type { FacebookApiResponse, FacebookError } from '@/types/facebook';
 
 class ApiError extends Error {
   code?: number;
   subcode?: number;
   traceId?: string;
+  isTransient: boolean;
+  response?: Response;
 
   constructor(error: FacebookError) {
     super(error.message);
@@ -12,7 +15,24 @@ class ApiError extends Error {
     this.code = error.code;
     this.subcode = error.error_subcode;
     this.traceId = error.fbtrace_id;
+    this.isTransient = isTransientError(error.code);
   }
+}
+
+// Helper function to identify transient errors
+function isTransientError(code?: number): boolean {
+  if (!code) return false;
+  
+  const transientCodes = [
+    1,    // API Unknown
+    2,    // API Service
+    4,    // API Too Many Calls
+    17,   // API User Too Many Calls
+    341,  // Application limit reached
+    368,  // Temporary oauth error
+  ];
+
+  return transientCodes.includes(code);
 }
 
 export async function fetchWithRetry<T>(
@@ -32,23 +52,43 @@ export async function fetchWithRetry<T>(
     const data: FacebookApiResponse<T> = await response.json();
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const traceId = response.headers.get('x-fb-trace-id') || '';
+      const error = new ApiError({ 
+        message: `HTTP error! status: ${response.status}`,
+        code: response.status,
+        type: 'http_error',
+        fbtrace_id: traceId
+      });
+      error.response = response;
+      
+      await errorReporter.report(error, {
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        traceId
+      });
+      throw error;
     }
 
     if (data.error) {
-      throw new ApiError(data.error);
+      const apiError = new ApiError(data.error);
+      await errorReporter.reportFacebookError(data.error, {
+        url,
+        method: options.method || 'GET',
+      });
+      throw apiError;
     }
 
     return data.data as T;
   }, {
     maxRetries: 3,
-    shouldRetry: (error) => {
+    shouldRetry: (error: Error) => {
       if (error instanceof ApiError) {
-        // Retry on rate limits or temporary errors
-        return [4, 17, 2, 1].includes(error.code || 0);
+        // Only retry transient errors
+        return error.isTransient;
       }
       // Retry on network errors or 5xx responses
-      return !error.response || error.response.status >= 500;
+      return true;
     }
   });
 }
@@ -67,5 +107,15 @@ export const apiClient = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  // Helper method for Facebook Graph API calls
+  async fetchFromGraph<T>(endpoint: string, accessToken: string, params: Record<string, string> = {}): Promise<T> {
+    const searchParams = new URLSearchParams({
+      access_token: accessToken,
+      ...params,
+    });
+
+    return this.get<T>(`https://graph.facebook.com/v18.0/${endpoint}?${searchParams}`);
   }
 };

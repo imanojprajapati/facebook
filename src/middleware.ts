@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { rateLimiter } from './middleware/rateLimit';
 
+const PRODUCTION_DOMAIN = 'leadstrack.in';
+
 export async function middleware(request: NextRequest) {
   // Only apply rate limiting to API routes
   if (request.nextUrl.pathname.startsWith('/api')) {
@@ -16,16 +18,29 @@ export async function middleware(request: NextRequest) {
   
   // Common security headers
   response.headers.set('X-DNS-Prefetch-Control', 'on');
-  response.headers.set('X-XSS-Prefetch-Control', '1; mode=block');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
-  // Add CSP header if not already set in next.config.js
-  if (!response.headers.has('Content-Security-Policy')) {
+
+  // Strict CSP for production
+  const cspDirectives = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https://*.fbcdn.net https://*.facebook.com https://graph.facebook.com",
+    `connect-src 'self' https://graph.facebook.com https://${PRODUCTION_DOMAIN}`,
+    "frame-ancestors 'none'",
+    "upgrade-insecure-requests"
+  ].join('; ');
+
+  response.headers.set('Content-Security-Policy', cspDirectives);
+
+  // HSTS only in production
+  if (process.env.NODE_ENV === 'production') {
     response.headers.set(
-      'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.fbcdn.net https://*.facebook.com https://graph.facebook.com; connect-src 'self' https://graph.facebook.com;"
+      'Strict-Transport-Security',
+      'max-age=31536000; includeSubDomains; preload'
     );
   }
 
@@ -37,6 +52,8 @@ export const config = {
   matcher: [
     // Apply to all API routes
     '/api/:path*',
+    // Apply to auth routes
+    '/auth/:path*',
     // Apply to all pages except static assets and api routes (which are handled above)
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],

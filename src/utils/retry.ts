@@ -3,10 +3,11 @@ interface RetryConfig {
   initialDelay?: number;
   maxDelay?: number;
   factor?: number;
-  shouldRetry?: (error: any) => boolean;
+  shouldRetry?: (error: Error) => boolean;
+  onRetry?: (error: Error, attempt: number) => void;
 }
 
-const defaultConfig: Required<RetryConfig> = {
+const defaultConfig: Required<Omit<RetryConfig, 'onRetry'>> = {
   maxRetries: 3,
   initialDelay: 1000, // Start with 1 second delay
   maxDelay: 10000,    // Maximum delay of 10 seconds
@@ -21,7 +22,7 @@ function delay(ms: number): Promise<void> {
 /**
  * Calculates the next delay using exponential backoff with jitter
  */
-function getNextDelay(retryCount: number, config: Required<RetryConfig>): number {
+function getNextDelay(retryCount: number, config: Required<Omit<RetryConfig, 'onRetry'>>): number {
   const exponentialDelay = config.initialDelay * Math.pow(config.factor, retryCount);
   const boundedDelay = Math.min(exponentialDelay, config.maxDelay);
   // Add random jitter between 0-25% of the delay
@@ -37,7 +38,7 @@ export async function retryWithBackoff<T>(
   config: RetryConfig = {}
 ): Promise<T> {
   const finalConfig = { ...defaultConfig, ...config };
-  let lastError: any;
+  let lastError: Error | null = null;
 
   for (let retryCount = 0; retryCount <= finalConfig.maxRetries; retryCount++) {
     try {
@@ -48,23 +49,28 @@ export async function retryWithBackoff<T>(
       
       return await fn();
     } catch (error) {
-      lastError = error;
+      lastError = error instanceof Error ? error : new Error(String(error));
       
       // Check if we should retry this error
-      if (!finalConfig.shouldRetry(error)) {
-        throw error;
+      if (!finalConfig.shouldRetry(lastError)) {
+        throw lastError;
       }
 
       // On last attempt, throw the error
       if (retryCount === finalConfig.maxRetries) {
-        throw error;
+        throw lastError;
+      }
+
+      // Call onRetry callback if provided
+      if (finalConfig.onRetry) {
+        finalConfig.onRetry(lastError, retryCount + 1);
       }
 
       // Log retry attempt in development
       if (process.env.NODE_ENV === 'development') {
         console.warn(
           `Retry attempt ${retryCount + 1}/${finalConfig.maxRetries}:`, 
-          error instanceof Error ? error.message : error
+          lastError instanceof Error ? lastError.message : lastError
         );
       }
     }
