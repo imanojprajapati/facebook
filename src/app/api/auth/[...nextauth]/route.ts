@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import FacebookProvider from "next-auth/providers/facebook";
 import { JWT } from "next-auth/jwt";
 import { errorReporter } from "@/utils/error-reporting";
-import { validateFacebookPermissions, REQUIRED_PERMISSIONS, type FacebookPermission } from "@/utils/facebook-permissions";
+import { validateFacebookPermissions, REQUIRED_PERMISSIONS } from "@/utils/facebook-permissions";
 
 interface ExtendedToken extends JWT {
   accessToken?: string;
