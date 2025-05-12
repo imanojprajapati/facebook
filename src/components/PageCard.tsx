@@ -1,145 +1,76 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import Image from 'next/image';
-import { FaUsers, FaCheckCircle, FaExternalLinkAlt, FaSpinner } from 'react-icons/fa';
-import type { FacebookPage, LeadResponse } from '@/types/facebook';
-import { LoadingSpinner } from './LoadingSpinner';
-import { LazyLoad } from './LazyLoad';
+import { useState } from 'react';
+import type { FacebookPage } from '@/types/facebook';
 
 interface PageCardProps {
   page: FacebookPage;
-  leads?: LeadResponse;
-  loadingLeads: boolean;
-  onLoadLeads: (pageId: string, pageToken: string) => void;
-  isSelected?: boolean;
 }
 
-export function PageCard({
-  page,
-  leads,
-  loadingLeads,
-  onLoadLeads,
-  isSelected = false
-}: PageCardProps) {
+export function PageCard({ page }: PageCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleLoadLeads = useCallback(() => {
-    if (!leads && !loadingLeads) {
-      onLoadLeads(page.id, page.access_token);
-    }
-    setIsExpanded(true);
-  }, [page, leads, loadingLeads, onLoadLeads]);
-
   return (
-    <LazyLoad
-      threshold={0.1}
-      rootMargin="50px"
-      placeholder={
-        <div className="h-64 bg-gray-100 rounded-lg animate-pulse" />
-      }
-    >
-      <article
-        role="article"
-        tabIndex={0}
-        className={`bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-200 ${
-          isSelected ? 'ring-2 ring-facebook ring-offset-2' : ''
-        }`}
-      >
-        <div className="relative">
-          {page.picture?.data?.url && (
-            <Image
-              src={page.picture.data.url}
-              alt={page.name}
-              width={400}
-              height={200}
-              className="w-full h-32 object-cover"
-              priority={false}
-            />
-          )}
-          {page.verification_status === 'verified' && (
-            <div className="absolute top-2 right-2 bg-white rounded-full p-1">
-              <FaCheckCircle className="text-facebook" />
-            </div>
-          )}
-        </div>
-
-        <div className="p-4">
-          <div className="flex items-start justify-between">
-            <h2 className="text-xl font-bold truncate">{page.name}</h2>
-            <a
-              href={page.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-facebook transition-colors"
-            >
-              <FaExternalLinkAlt />
-            </a>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-start space-x-4">
+        {page.picture?.data?.url && (
+          <img
+            src={page.picture.data.url}
+            alt=""
+            className="w-12 h-12 rounded-lg flex-shrink-0"
+          />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900 truncate">{page.name}</h3>
+            {page.verification_status === 'verified' && (
+              <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            )}
           </div>
-
-          <div className="mt-2 flex items-center gap-2 text-gray-600">
-            <FaUsers />
-            <span>{page.fan_count?.toLocaleString() || 0} followers</span>
-          </div>
-
-          <div className="mt-4">
+          <p className="text-sm text-gray-500">{page.category}</p>
+          
+          <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+            <span>{page.fan_count?.toLocaleString() || 0} fans</span>
             <button
-              onClick={handleLoadLeads}
-              className={`w-full py-2 px-4 rounded-lg transition-colors duration-200 ${
-                isExpanded
-                  ? 'bg-gray-100 text-gray-700'
-                  : 'bg-facebook hover:bg-facebook-hover text-white'
-              }`}
-              disabled={loadingLeads}
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-blue-600 hover:text-blue-800"
             >
-              {loadingLeads ? (
-                <div className="flex items-center justify-center gap-2">
-                  <FaSpinner className="animate-spin" />
-                  <span>Loading leads...</span>
-                </div>
-              ) : (
-                <span>{isExpanded ? 'Hide leads' : 'View leads'}</span>
-              )}
+              {isExpanded ? 'Show less' : 'Show more'}
             </button>
           </div>
 
           {isExpanded && (
-            <div className="mt-4">
-              {loadingLeads ? (
-                <LoadingSpinner size="medium" />
-              ) : leads ? (
-                leads.error ? (
-                  <div className="text-red-500 text-sm">{leads.error}</div>
-                ) : (
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">
-                      Recent Leads ({leads.leads.length})
-                    </h3>
-                    <div className="max-h-60 overflow-y-auto">
-                      {leads.leads.map((lead) => (
-                        <div
-                          key={lead.id}
-                          className="p-2 bg-gray-50 rounded text-sm mb-2"
-                        >
-                          <div className="text-gray-500 text-xs">
-                            {new Date(lead.created_time).toLocaleDateString()}
-                          </div>
-                          {lead.field_data.map((field) => (
-                            <div key={field.name} className="mt-1">
-                              <span className="font-medium">{field.name}:</span>{' '}
-                              {field.values.join(', ')}
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              ) : null}
+            <div className="mt-4 space-y-2 text-sm">
+              {page.link && (
+                <a
+                  href={page.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 block"
+                >
+                  View on Facebook
+                </a>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {page.tasks.map((task, index) => (
+                  <span
+                    key={index}
+                    className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600"
+                  >
+                    {task}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
-      </article>
-    </LazyLoad>
+      </div>
+    </div>
   );
 }
