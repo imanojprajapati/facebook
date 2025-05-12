@@ -27,9 +27,10 @@ export async function middleware(request: NextRequest) {
   const cspDirectives = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-    "style-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https://*.fbcdn.net https://*.facebook.com https://graph.facebook.com",
-    `connect-src 'self' https://graph.facebook.com https://${PRODUCTION_DOMAIN}`,
+    `connect-src 'self' https://graph.facebook.com https://${PRODUCTION_DOMAIN} https://fonts.googleapis.com https://fonts.gstatic.com`,
     "frame-ancestors 'none'",
     "upgrade-insecure-requests"
   ].join('; ');
