@@ -1,8 +1,9 @@
-import { getServerSession } from "next-auth/next";
+import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { apiClient } from "@/utils/api-client";
 import type { FacebookData, FacebookUser, FacebookPage, FacebookApiResponse } from "@/types/facebook";
 import { errorReporter } from "@/utils/error-reporting";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 interface FacebookAPIError {
   code: number;
@@ -11,10 +12,17 @@ interface FacebookAPIError {
 }
 
 export async function GET() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   
   if (!session?.accessToken) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    console.error("Session missing or invalid:", { 
+      hasSession: !!session,
+      sessionKeys: session ? Object.keys(session) : null
+    });
+    return NextResponse.json({ 
+      error: "Not authenticated",
+      details: "Please sign in again to refresh your session"
+    }, { status: 401 });
   }
 
   try {
@@ -43,7 +51,7 @@ export async function GET() {
   } catch (error: unknown) {
     errorReporter.reportFacebookError(error, {
       context: 'fetch_pages',
-      sessionId: session.accessToken?.slice(-8)
+      sessionId: session.accessToken.slice(-8)
     });
 
     const fbError = error as FacebookAPIError;
