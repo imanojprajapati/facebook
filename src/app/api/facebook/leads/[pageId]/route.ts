@@ -40,7 +40,7 @@ export async function GET(
 
     console.log('🔍 Starting leads fetch for page:', params.pageId);
 
-    // Get page access token with retry
+    // Get page access token
     let pageData: PageData;
     try {
       pageData = await apiClient.fetchFromGraph<PageData>(
@@ -50,14 +50,10 @@ export async function GET(
       );
     } catch (error: any) {
       console.error('❌ Failed to fetch page access token:', error);
-      const status = error.code === 190 ? 401 : // Invalid access token
-                    error.code === 100 ? 404 : // Page not found
-                    error.code === 200 ? 403 : // Permission error
-                    500;
       return NextResponse.json({
         error: 'Failed to get page access token',
         details: error.message
-      }, { status });
+      }, { status: error.code === 190 ? 401 : 500 });
     }
 
     if (!pageData?.access_token) {
@@ -70,7 +66,7 @@ export async function GET(
 
     console.log('✅ Successfully got page access token');
 
-    // Get lead forms with retry
+    // Get lead forms with all necessary fields
     let formsResponse;
     try {
       formsResponse = await apiClient.fetchFromGraph<{ data: LeadgenForm[] }>(
@@ -106,12 +102,13 @@ export async function GET(
       }))
     });
 
-    // Get leads for each form in parallel with individual error handling
+    // Get leads for each form using the direct form ID endpoint
     const leads = await Promise.all(
       formsResponse.data.map(async (form) => {
         try {
-          console.log(`🔍 Fetching leads for form: ${form.name} (${form.id})`);
+          console.log(`🔍 Fetching leads for form ${form.id} (${form.name})`);
           
+          // Use the direct form ID endpoint to fetch leads
           const leadResponse = await apiClient.fetchFromGraph<{ data: Lead[] }>(
             `${form.id}/leads`,
             pageData.access_token,
@@ -122,22 +119,26 @@ export async function GET(
           );
 
           if (!leadResponse?.data) {
-            throw new Error('No leads data received from Facebook');
+            throw new Error(`No leads data received for form ${form.id}`);
           }
 
-          console.log(`✅ Found ${leadResponse.data.length} leads for form: ${form.name}`);
+          console.log(`✅ Found ${leadResponse.data.length} leads for form ${form.name}`);
 
           return {
             form_id: form.id,
             form_name: form.name,
-            leads: leadResponse.data
+            leads: leadResponse.data.map(lead => ({
+              id: lead.id,
+              created_time: lead.created_time,
+              field_data: lead.field_data
+            }))
           };
         } catch (error: any) {
           console.error(`❌ Error fetching leads for form ${form.id}:`, error);
           return {
             form_id: form.id,
             form_name: form.name,
-            error: error.message,
+            error: error.message || 'Unknown error',
             errorCode: error.code,
             leads: []
           };
@@ -154,18 +155,6 @@ export async function GET(
 
     console.log('📊 Final response stats:', stats);
 
-    // If all forms failed, return an error
-    if (stats.formsWithErrors === stats.formCount && stats.formCount > 0) {
-      const firstError = leads.find(form => 'error' in form);
-      return NextResponse.json({
-        error: 'Failed to fetch leads for all forms',
-        details: firstError?.error || 'Unknown error',
-        forms: formsResponse.data,
-        leads,
-        stats
-      }, { status: 500 });
-    }
-
     return NextResponse.json({
       forms: formsResponse.data,
       leads,
@@ -179,17 +168,13 @@ export async function GET(
       pageId: params.pageId
     });
 
-    const statusCode = error.code === 190 ? 401 :  // Invalid access token
-                      error.code === 200 ? 403 :  // Permissions error
-                      500;
-
     return NextResponse.json(
       { 
         error: "Failed to fetch leads",
         details: error.message || "Unknown error",
         code: error.code
       },
-      { status: statusCode }
+      { status: error.code === 190 ? 401 : 500 }
     );
   }
 }
