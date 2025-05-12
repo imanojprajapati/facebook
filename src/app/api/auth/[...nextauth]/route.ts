@@ -44,13 +44,12 @@ declare module "next-auth/jwt" {
 export const authOptions: AuthOptions = {
   debug: process.env.NODE_ENV === 'development',
   providers: [
-    FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID!,
+    FacebookProvider({      clientId: process.env.FACEBOOK_CLIENT_ID!,
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
       authorization: {
         url: "https://www.facebook.com/v19.0/dialog/oauth",
         params: {
-          scope: "pages_show_list,leads_retrieval,pages_read_engagement,pages_manage_metadata",
+          scope: "pages_show_list,leads_retrieval,pages_read_engagement,pages_manage_leads,pages_manage_metadata,business_management",
           auth_type: "rerequest"
         }
       },
@@ -70,11 +69,21 @@ export const authOptions: AuthOptions = {
       }
     })
   ],
-  callbacks: {
-    async signIn({ user, account, profile }: { user: User; account: Account | null; profile?: Profile }) {
+  callbacks: {    async signIn({ user, account, profile }: { user: User; account: Account | null; profile?: Profile }) {
       try {
         if (account?.provider === 'facebook' && account.access_token) {
+          console.log('🔍 Validating Facebook login...');
+          
           // First validate permissions
+          const requiredPermissions = [
+            "pages_show_list",
+            "leads_retrieval",
+            "pages_read_engagement",
+            "pages_manage_leads",
+            "pages_manage_metadata",
+            "business_management"
+          ];
+          
           const hasPermissions = await validateFacebookPermissions(
             account.access_token,
             [...REQUIRED_PERMISSIONS]
