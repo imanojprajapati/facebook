@@ -41,11 +41,10 @@ function SignInContent() {
   const handleFacebookLogin = async () => {
     try {
       setIsLoading(true);
-      setError(null);
-
-      const result = await signIn("facebook", {
+      setError(null);      const result = await signIn("facebook", {
         callbackUrl,
-        redirect: true
+        redirect: true,
+        scope: 'pages_show_list,leads_retrieval,pages_read_engagement,pages_manage_leads,pages_manage_ads,pages_manage_metadata,business_management'
       });
 
     } catch (error) {

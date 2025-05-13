@@ -43,7 +43,7 @@ export default function PageLeads() {
     if (status === 'unauthenticated') {
       signIn('facebook', {
         callbackUrl: window.location.href,
-        scope: 'pages_show_list,leads_retrieval,pages_read_engagement,pages_manage_leads'
+        scope: 'pages_show_list,leads_retrieval,pages_read_engagement,pages_manage_leads,pages_manage_ads'
       });
     }
   }, [status]);
