@@ -37,6 +37,7 @@ export default function PageLeads() {
   const [selectedForm, setSelectedForm] = useState<string | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [pageName, setPageName] = useState<string>("");
+  const [retryCount, setRetryCount] = useState(0);
 
   // Step 1: Handle Facebook Login
   useEffect(() => {
@@ -59,12 +60,24 @@ export default function PageLeads() {
 
         const response = await fetch(`/api/facebook/leads/${pageId}/forms`);
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.details || 'Failed to fetch forms');
+          const errorData = await response.json();
+          
+          // Handle specific error cases
+          if (response.status === 403) {
+            throw new Error(errorData.details || 'Access denied. Please check your Facebook Page permissions.');
+          }
+          
+          throw new Error(errorData.details || 'Failed to fetch forms');
         }
         
         const data = await response.json();
         console.log('📊 Lead Forms Data:', data);
+        
+        if (!data.forms || data.forms.length === 0) {
+          setError('No lead forms found for this page. Make sure you have created lead forms and have proper access.');
+          setLoading(false);
+          return;
+        }
         
         setForms(data.forms);
         setPageName(data.page?.name || "");
@@ -73,14 +86,30 @@ export default function PageLeads() {
         }
       } catch (err) {
         console.error('Error fetching forms:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load forms');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load forms';
+        setError(errorMessage);
+        
+        // If we get an access denial, show more helpful information
+        if (errorMessage.includes('access denied') || errorMessage.includes('permission')) {
+          setError(`${errorMessage}\n\nTo fix this:\n1. Go to your Facebook Page Settings\n2. Click Tasks/Roles\n3. Find your account\n4. Enable "Access Lead Gen"\n\nIf you don't see this option, ask a Page Admin for access.`);
+        }
+        
+        // Implement retry logic with backoff for transient errors
+        if (retryCount < 3 && !errorMessage.includes('permission')) {
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            fetchForms();
+          }, Math.pow(2, retryCount) * 1000); // Exponential backoff
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchForms();
-  }, [session, pageId]);
+    if (session && pageId) {
+      fetchForms();
+    }
+  }, [session, pageId, retryCount]);
 
   // Step 3: Fetch Leads when form is selected
   useEffect(() => {

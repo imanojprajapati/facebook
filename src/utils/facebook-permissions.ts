@@ -19,7 +19,8 @@ export type FacebookPermission = typeof REQUIRED_PERMISSIONS[number];
 export async function validateFacebookPermissions(
   accessToken: string, 
   requiredPermissions: FacebookPermission[] = [...REQUIRED_PERMISSIONS]
-): Promise<boolean> {  try {
+): Promise<boolean> {
+  try {
     console.log('🔍 Validating Facebook permissions...');
     
     // First check the token debug info
@@ -28,11 +29,16 @@ export async function validateFacebookPermissions(
     );
     const debugData = await debugResponse.json();
     
+    if (!debugData.data?.is_valid) {
+      console.error('❌ Invalid Facebook token:', debugData.data);
+      return false;
+    }
+    
     console.log('🔑 Token debug info:', {
-      isValid: debugData.data?.is_valid,
-      type: debugData.data?.type,
-      scopes: debugData.data?.scopes,
-      userId: debugData.data?.user_id
+      isValid: debugData.data.is_valid,
+      type: debugData.data.type,
+      scopes: debugData.data.scopes,
+      userId: debugData.data.user_id
     });
 
     // Then check granted permissions
@@ -55,16 +61,57 @@ export async function validateFacebookPermissions(
     console.log('✅ Granted permissions:', Array.from(grantedPermissions));
     console.log('🔒 Required permissions:', requiredPermissions);
 
+    // Check for all required permissions
     const missingPermissions = requiredPermissions.filter(
       permission => !grantedPermissions.has(permission)
     );
 
     if (missingPermissions.length > 0) {
       console.error('❌ Missing permissions:', missingPermissions);
+      errorReporter.report(new Error('Missing required Facebook permissions'), {
+        type: 'facebook_permissions_error',
+        context: 'validation',
+        missingPermissions
+      });
       return false;
     }
 
-    return true;
+    // Now check page access permissions using the /me/accounts endpoint
+    try {
+      const pagesResponse = await apiClient.fetchFromGraph<{ 
+        data: Array<{ 
+          id: string; 
+          access_token: string;
+          tasks: string[];
+        }> 
+      }>('me/accounts', accessToken, { fields: 'tasks,access_token' });
+
+      if (!pagesResponse?.data?.length) {
+        console.error('❌ No pages found or no access to any pages');
+        return false;
+      }
+
+      // Check if any page has lead access
+      const hasLeadAccess = pagesResponse.data.some(
+        page => page.tasks?.includes('ACCESS_LEAD_GEN')
+      );
+
+      if (!hasLeadAccess) {
+        console.error('❌ No pages with ACCESS_LEAD_GEN permission found');
+        return false;
+      }
+
+      console.log('✅ Found pages with lead access');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Error checking page permissions:', error);
+      errorReporter.report(error instanceof Error ? error : new Error('Failed to check page permissions'), {
+        type: 'facebook_page_permissions_error'
+      });
+      return false;
+    }
+
   } catch (error) {
     console.error('❌ Error validating permissions:', error);
     errorReporter.report(error instanceof Error ? error : new Error('Permission validation failed'), {
