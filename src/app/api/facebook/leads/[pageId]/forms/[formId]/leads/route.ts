@@ -48,14 +48,13 @@ export async function GET(
           error: 'Page not found or no access',
           details: 'Make sure you are an admin of this page'
         }, { status: 403 });
-      }
-
-      // Step 3: Get leads for the specific form
+      }      // Step 3: Get leads for the specific form
       const leadResponse = await apiClient.fetchFromGraph<{ data: Lead[] }>(
-        `${params.formId}/leads`,
+        `${params.pageId}/leads`,
         page.access_token,
         {
-          fields: 'id,created_time,field_data',
+          fields: 'id,created_time,field_data,form_id',
+          form_id: params.formId,
           limit: '100'
         }
       );

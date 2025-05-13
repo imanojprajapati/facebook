@@ -47,11 +47,9 @@ export async function GET(
           error: 'Page not found or no access',
           details: 'Make sure you are an admin of this page'
         }, { status: 403 });
-      }
-
-      // Step 3: Get lead forms for the page
+      }      // Step 3: Get lead forms for the page
       const formsResponse = await apiClient.fetchFromGraph<{ data: LeadgenForm[] }>(
-        `${params.pageId}/leadgen_forms`,
+        `${params.pageId}/forms`,
         page.access_token,
         { 
           fields: 'id,name,status,leads_count,created_time',
