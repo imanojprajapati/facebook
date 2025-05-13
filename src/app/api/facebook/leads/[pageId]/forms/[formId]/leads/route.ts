@@ -28,27 +28,35 @@ export async function GET(
     console.log(`🔍 Fetching leads for form ${params.formId} on page ${params.pageId}`);
 
     // Step 2: Get page access token from user's pages
-    try {
-      const pagesResponse = await apiClient.fetchFromGraph<{ 
+    try {      const pagesResponse = await apiClient.fetchFromGraph<{ 
         data: Array<{ 
           id: string; 
           access_token: string;
           name: string;
+          tasks: string[];
         }> 
       }>(
-        'me/accounts',
-        session.accessToken,
-        { fields: 'name,id,access_token' }
-      );
-
-      const page = pagesResponse.data.find(p => p.id === params.pageId);
+        'me/accounts',        session.accessToken,
+        { fields: 'name,id,access_token,tasks' }
+      );      const page = pagesResponse.data.find(p => p.id === params.pageId);
       if (!page) {
         console.error('❌ Page not found in user\'s accounts');
         return NextResponse.json({
           error: 'Page not found or no access',
           details: 'Make sure you are an admin of this page'
         }, { status: 403 });
-      }      // Step 3: Get leads for the specific form
+      }
+      
+      // Check basic lead access permissions
+      if (!page.tasks?.includes('READ_PAGE_MAILBOXES')) {
+        console.error('❌ Missing required page permissions');
+        return NextResponse.json({
+          error: 'Insufficient page permissions',
+          details: 'Please ensure you have the necessary page permissions to access leads'
+        }, { status: 403 });
+      }
+      
+      // Step 3: Get leads for the specific form
       const leadResponse = await apiClient.fetchFromGraph<{ data: Lead[] }>(
         `${params.formId}/leads`,
         page.access_token,
