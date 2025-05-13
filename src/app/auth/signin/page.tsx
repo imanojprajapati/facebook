@@ -24,13 +24,16 @@ function SignInContent() {
           setError("Server configuration error. Please try again later.");
           break;
         case "AccessDenied":
-          setError("Please grant all required permissions to manage your Facebook pages.");
+          setError("You need to grant all required Facebook permissions to continue. Please try signing in again.");
           break;
         case "OAuthSignin":
           setError("Unable to connect to Facebook. Please check your internet connection.");
           break;
         case "OAuthCallback":
           setError("Facebook login was interrupted. Please try again.");
+          break;
+        case "permissions":
+          setError("To access leads, you need:\n1. Basic app permissions (grant these when signing in)\n2. Page-specific permissions (get these from Page Settings > Tasks)");
           break;
         default:
           setError("An error occurred during sign in. Please try again.");
@@ -41,7 +44,9 @@ function SignInContent() {
   const handleFacebookLogin = async () => {
     try {
       setIsLoading(true);
-      setError(null);      const result = await signIn("facebook", {
+      setError(null);
+      
+      const result = await signIn("facebook", {
         callbackUrl,
         redirect: true,
         scope: 'pages_show_list,leads_retrieval,pages_read_engagement'
@@ -72,7 +77,7 @@ function SignInContent() {
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
-            <p className="text-red-600 text-sm">{error}</p>
+            <p className="text-red-600 text-sm whitespace-pre-line">{error}</p>
           </div>
         )}
 

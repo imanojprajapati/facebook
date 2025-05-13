@@ -8,14 +8,19 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 // Error solutions mapping
-const errorSolutions: Record<string, string[]> = {
-  permissions: [
-    'Make sure to accept ALL required Facebook permissions:',
-    '- Pages Show List',
-    '- Leads Retrieval',
-    '- Pages Read Engagement',
-    '- Pages Manage Metadata',
-    'Log out of Facebook completely and try again'
+const errorSolutions: Record<string, string[]> = {  permissions: [
+    'You need to grant additional permissions:',
+    '1. For the Facebook App:',
+    '   • Pages Show List',
+    '   • Leads Retrieval',
+    '   • Pages Read Engagement',
+    '2. For each Facebook Page:',
+    '   • Access Lead Gen (grant this in Facebook Page Settings)',
+    'Steps to fix:',
+    '1. Log out of Facebook completely',
+    '2. Sign in again and accept all permissions',
+    '3. Go to each Facebook Page > Settings > Tasks > Lead Access',
+    '4. Enable "Access Lead Gen" for your account'
   ],
   invalid_token: [
     'Your Facebook session has expired',

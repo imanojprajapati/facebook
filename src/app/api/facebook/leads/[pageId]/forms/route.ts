@@ -54,8 +54,9 @@ export async function GET(
       if (!page.tasks?.includes('ACCESS_LEAD_GEN')) {
         console.error('❌ Missing required page permissions');
         return NextResponse.json({
-          error: 'Insufficient page permissions',
-          details: 'Please ensure you have been granted the "Access Lead Gen" permission. You may need to be added as a Page Admin or have this specific permission assigned.'
+          error: 'Missing Facebook Page Permission',
+          details: 'To access leads, you need the "Access Lead Gen" permission on this Facebook Page.\n\nSteps to fix:\n1. Go to Facebook Page Settings\n2. Click Tasks/Roles\n3. Find your account\n4. Click Edit\n5. Enable "Access Lead Gen"\n\nIf you don\'t see this option, ask a Page Admin to grant you the permission.',
+          helpUrl: 'https://www.facebook.com/business/help/1869651226666390'
         }, { status: 403 });
       }
 
