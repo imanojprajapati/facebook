@@ -46,9 +46,12 @@ export const authOptions: AuthOptions = {
   providers: [
     FacebookProvider({      clientId: process.env.FACEBOOK_CLIENT_ID!,
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,      authorization: {
-        url: "https://www.facebook.com/v19.0/dialog/oauth",        params: {
+        url: "https://www.facebook.com/v19.0/dialog/oauth",
+        params: {
           scope: "pages_show_list,leads_retrieval,pages_read_engagement",
-          auth_type: "rerequest"
+          auth_type: "rerequest",
+          return_scopes: true,
+          enable_profile_selector: true
         }
       },
       userinfo: {
