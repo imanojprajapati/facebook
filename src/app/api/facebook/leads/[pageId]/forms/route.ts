@@ -8,7 +8,6 @@ interface LeadgenForm {
   id: string;
   name: string;
   status: string;
-  leads_count: number;
   created_time: string;
 }
 
@@ -49,10 +48,10 @@ export async function GET(
         }, { status: 403 });
       }      // Step 3: Get lead forms for the page
       const formsResponse = await apiClient.fetchFromGraph<{ data: LeadgenForm[] }>(
-        `${params.pageId}/forms`,
+        `${params.pageId}/leadgen_forms`,
         page.access_token,
         { 
-          fields: 'id,name,status,leads_count,created_time',
+          fields: 'id,name,status,created_time',
           limit: '100'
         }
       );
@@ -63,10 +62,8 @@ export async function GET(
 
       console.log('📋 Found lead forms:', {
         count: formsResponse.data.length,
-        forms: formsResponse.data.map(f => ({
-          id: f.id,
-          name: f.name,
-          leadCount: f.leads_count
+        forms: formsResponse.data.map(f => ({          id: f.id,
+          name: f.name
         }))
       });
 

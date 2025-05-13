@@ -50,11 +50,10 @@ export async function GET(
         }, { status: 403 });
       }      // Step 3: Get leads for the specific form
       const leadResponse = await apiClient.fetchFromGraph<{ data: Lead[] }>(
-        `${params.pageId}/leads`,
+        `${params.formId}/leads`,
         page.access_token,
         {
-          fields: 'id,created_time,field_data,form_id',
-          form_id: params.formId,
+          fields: 'id,created_time,field_data',
           limit: '100'
         }
       );
