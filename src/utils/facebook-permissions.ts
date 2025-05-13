@@ -9,6 +9,11 @@ export const REQUIRED_PERMISSIONS = [
   "pages_read_engagement"
 ] as const;
 
+// For reference, these permissions should NOT be requested:
+// - pages_manage_ads (not needed for lead access)
+// - pages_manage_leads (legacy permission, use leads_retrieval instead)
+// - pages_manage_metadata (not needed for lead access)
+
 export type FacebookPermission = typeof REQUIRED_PERMISSIONS[number];
 
 export async function validateFacebookPermissions(
