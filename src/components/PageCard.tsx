@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { FacebookPage } from '@/types/facebook';
+import Link from 'next/link';
 
 interface PageCardProps {
   page: FacebookPage;
@@ -46,7 +47,7 @@ export function PageCard({ page }: PageCardProps) {
           </div>
 
           {isExpanded && (
-            <div className="mt-4 space-y-2 text-sm">
+            <div className="mt-4 space-y-3">
               {page.link && (
                 <a
                   href={page.link}
@@ -57,6 +58,12 @@ export function PageCard({ page }: PageCardProps) {
                   View on Facebook
                 </a>
               )}
+              <Link 
+                href={`/pages/${page.id}/leads`}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors inline-block"
+              >
+                View Leads
+              </Link>
               <div className="flex flex-wrap gap-2">
                 {page.tasks.map((task, index) => (
                   <span
