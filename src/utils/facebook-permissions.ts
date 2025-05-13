@@ -7,10 +7,7 @@ export const REQUIRED_PERMISSIONS = [
   "pages_show_list",
   "leads_retrieval",
   "pages_read_engagement",
-  "pages_manage_leads",
-  "pages_manage_metadata",
-  "pages_manage_ads",
-  "business_management"
+  "pages_manage_leads"
 ] as const;
 
 export type FacebookPermission = typeof REQUIRED_PERMISSIONS[number];

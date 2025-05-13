@@ -44,7 +44,7 @@ function SignInContent() {
       setError(null);      const result = await signIn("facebook", {
         callbackUrl,
         redirect: true,
-        scope: 'pages_show_list,leads_retrieval,pages_read_engagement,pages_manage_leads,pages_manage_ads,pages_manage_metadata,business_management'
+        scope: 'pages_show_list,leads_retrieval,pages_read_engagement,pages_manage_leads'
       });
 
     } catch (error) {

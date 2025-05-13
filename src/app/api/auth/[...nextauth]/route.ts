@@ -45,11 +45,10 @@ export const authOptions: AuthOptions = {
   debug: process.env.NODE_ENV === 'development',
   providers: [
     FacebookProvider({      clientId: process.env.FACEBOOK_CLIENT_ID!,
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
-      authorization: {
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,      authorization: {
         url: "https://www.facebook.com/v19.0/dialog/oauth",
         params: {
-          scope: "pages_show_list,leads_retrieval,pages_read_engagement,pages_manage_leads,pages_manage_metadata,business_management",
+          scope: "pages_show_list,leads_retrieval,pages_read_engagement,pages_manage_leads",
           auth_type: "rerequest"
         }
       },
@@ -73,17 +72,7 @@ export const authOptions: AuthOptions = {
       try {
         if (account?.provider === 'facebook' && account.access_token) {
           console.log('🔍 Validating Facebook login...');
-          
-          // First validate permissions
-          const requiredPermissions = [
-            "pages_show_list",
-            "leads_retrieval",
-            "pages_read_engagement",
-            "pages_manage_leads",
-            "pages_manage_metadata",
-            "business_management"
-          ];
-          
+            // First validate permissions
           const hasPermissions = await validateFacebookPermissions(
             account.access_token,
             [...REQUIRED_PERMISSIONS]
