@@ -44,13 +44,12 @@ export async function GET(
           details: 'Make sure you are an admin of this page'
         }, { status: 403 });
       }
-      
-      // Make sure we have basic permissions for lead access
-      if (!page.tasks?.includes('READ_PAGE_MAILBOXES')) {
+        // Make sure we have basic permissions for lead access
+      if (!page.tasks?.includes('ACCESS_LEAD_GEN')) {
         console.error('❌ Missing required page permissions');
         return NextResponse.json({
           error: 'Insufficient page permissions',
-          details: 'Please ensure you have the necessary page permissions to access leads'
+          details: 'Please make sure you are a Page Admin or have the "Access Lead Gen" permission'
         }, { status: 403 });
       }// Step 3: Get lead forms for the page
       const formsResponse = await apiClient.fetchFromGraph<{ data: LeadgenForm[] }>(

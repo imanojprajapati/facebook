@@ -59,13 +59,11 @@ export async function GET(
           error: 'Page not found or no access',
           details: 'Make sure you are an admin of this page'
         }, { status: 403 });
-      }
-
-      if (!page.tasks.includes('MANAGE_LEADS')) {
-        console.error('❌ Page missing MANAGE_LEADS permission');
+      }      if (!page.tasks.includes('ACCESS_LEAD_GEN')) {
+        console.error('❌ Page missing ACCESS_LEAD_GEN permission');
         return NextResponse.json({
           error: 'Insufficient page permissions',
-          details: 'You need the MANAGE_LEADS permission for this page'
+          details: 'Please make sure you are a Page Admin or have the "Access Lead Gen" permission'
         }, { status: 403 });
       }
 
